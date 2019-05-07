@@ -1,0 +1,2 @@
+% initialisation: run addPaths
+addPaths
