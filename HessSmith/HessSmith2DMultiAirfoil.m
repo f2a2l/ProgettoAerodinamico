@@ -1,17 +1,17 @@
-function [x, y, p1, Cp , v, varargout] = HessSmith2DMultiAirfoil(method, npoint, U, aname, alpha, varargin)% dist, crel)
+function [x, y, p1, Cp , v, varargout] = HessSmith2DMultiAirfoil(npoint, U, aname, alpha, varargin)% dist, crel)
 
 t1 = cputime;
 
 
 if (isempty (varargin)) && length(alpha) == 1
-    aname = cellstr(aname);
-    aname1 = char(aname(1));
+
+    aname1 = aname(1, :);
     fprintf('Single airfoil case')
     t1 = cputime;
 
     alpha1 = alpha;
     % Airfoil discretization
-    [x, y] = AirfoilShape (aname1, method, npoint);
+    [x, y] = AirfoilShape (aname1, npoint);
     [p1] = Panels (x, y);
 
     % Aerodynamic Influence Coefficients Matrix [AIC]
@@ -35,7 +35,7 @@ if (isempty (varargin)) && length(alpha) == 1
     t2 = cputime;
 
     % Print
-    PrintFun (aname1, t2-t1, Cl, Cd, Cm, CmLE);
+    PrintFun (int2str(1), t2-t1, Cl, Cd, Cm, CmLE);
     
     
      t3 = cputime;
@@ -56,7 +56,6 @@ elseif (~isempty (varargin)) && length(alpha) >= 2
     nairfoils = length(alpha);
     fprintf('Multi airfoil case: n airfoils is: %6d \n', nairfoils)
 
-    aname_cell = cellstr(aname);
     dist = varargin{1};
     c = 1;
     % security check FIXME: sicuramente sbagliato, forse togli
@@ -76,10 +75,8 @@ elseif (~isempty (varargin)) && length(alpha) >= 2
     y = zeros(2*npoint + 1,nairfoils);
 
 
-
     for i = 1:nairfoils
-        aname = char(aname_cell(i));
-        [x(:,i), y(:,i)] = AirfoilShape (aname, method, npoint);
+        [x(:,i), y(:,i)] = AirfoilShape (aname(i,:), npoint);
         if i > 1
             x(:,i) = crel(i-1) * x(:,i);
             y(:,i) = crel(i-1) * y(:,i);
@@ -87,7 +84,7 @@ elseif (~isempty (varargin)) && length(alpha) >= 2
     end
 
     for i = 2:nairfoils
-    % FIXME: qui ho fatto modifiche, funzionerà davvero?
+    % TODO: qui ho fatto modifiche, funzionerà davvero?
 
         alpha_rel = alpha(i) - alpha(1);
 
@@ -138,8 +135,7 @@ elseif (~isempty (varargin)) && length(alpha) >= 2
             [Cl(i), Cd(i), Cm(i), CmLE(i)] = Loads (p1(i), Cp(:,i), alpha(i), dist(i-1,:));
         end
         t2 = cputime;
-        aname = char(aname_cell(i));
-        PrintFun (aname, t2-t1, Cl(i), Cd(i), Cm(i), CmLE(i));
+        PrintFun (int2str(i), t2-t1, Cl(i), Cd(i), Cm(i), CmLE(i));
     end
 
 

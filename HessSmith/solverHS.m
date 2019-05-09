@@ -20,17 +20,16 @@ function solverHS(AirfNumb, aname, alpha, dist, crel)
 
     % TODO: check inputs size
 
-    method = 'cos';
-    npoint = 80;
+    npoint = 49; % 80
     U = 1;
     % -------------------------------------------------------------------------
     % Hess-Smith method (external function)
 
     if AirfNumb == 1
-        [x, y, p1, Cp , v, p, uField, vField, Xgrid, Ygrid] = HessSmith2DMultiAirfoil (method, npoint, U, aname, alpha);
+        [x, y, p1, Cp , v, p, uField, vField, Xgrid, Ygrid] = HessSmith2DMultiAirfoil (npoint, U, aname, alpha);
         dist = [0 0];
     else
-        [x, y, p1, Cp , v, p, uField, vField, Xgrid, Ygrid] = HessSmith2DMultiAirfoil (method, npoint, U, aname, alpha, dist, crel);
+        [x, y, p1, Cp , v, p, uField, vField, Xgrid, Ygrid] = HessSmith2DMultiAirfoil (npoint, U, aname, alpha, dist, crel);
 
     end
     
