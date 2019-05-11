@@ -1,4 +1,0 @@
-# ProgettoAerodinamico
-
-first
-second
