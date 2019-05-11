@@ -1,9 +1,5 @@
 # ProgettoAerodinamico
 
-<<<<<<< HEAD
-first
-second
-=======
 ## Coding guidelines
 - __never__ push code to 'origin master'
 - always run code from `ProgettoAerodinamico` folder; do not open subfolders in MATLAB
@@ -18,4 +14,3 @@ second
 - git cheatsheet: https://github.github.com/training-kit/
 - how to ignore files with `.gitignore`: https://git-scm.com/docs/gitignore
 
->>>>>>> 928753d2633461993e06bac8e36910e6350f4422
