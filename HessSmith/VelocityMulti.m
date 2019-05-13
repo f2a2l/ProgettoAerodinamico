@@ -5,7 +5,7 @@ ntot = length(p.panel);
 nairfoils = length(p1);
 nterz = (ntot - nairfoils)/nairfoils;
 
-alpha1 = alpha(1); % il sist. di riferimento è solidale al primo profilo
+alpha1 = alpha(1); % il sist. di riferimento ï¿½ solidale al primo profilo
 uInf1 = U*[cos(deg2rad(alpha1)); sin(deg2rad(alpha1))];
 
 v = zeros(ntot-nairfoils,1);
@@ -71,10 +71,10 @@ end
 
 for k = 1:nairfoils
     j = 0;
-  for  i = ((k-1)*nterz + 1):k*nterz;
-     j = j + 1;
-    vaux(j,k) = v(i);
-  end
+    for  i = ((k-1)*nterz + 1):k*nterz
+        j = j + 1;
+        vaux(j,k) = v(i);
+    end
 end
 
 

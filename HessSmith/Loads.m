@@ -1,6 +1,6 @@
 function [Cl, Cd] = Loads(p, Cp, alpha)
 
-
+    
 n = length(p.panel);
 
 CFx = 0;

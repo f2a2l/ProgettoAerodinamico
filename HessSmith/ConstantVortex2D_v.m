@@ -1,4 +1,4 @@
-function [u] = ConstantVortex2D (gamma_J, panel_J, panels)
+function [u] = ConstantVortex2D_v(gamma_J, panel_J, panels)
 
 %
 
