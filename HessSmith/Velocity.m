@@ -50,5 +50,4 @@ v = v + ti'*uInf;
 %     v(i) = v(i) + ti*uInf;
 %     
 % end
-v(22) 
 return
