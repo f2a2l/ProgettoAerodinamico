@@ -71,8 +71,8 @@ elseif (~isempty (varargin)) && length(alpha) >= 2
 
 
 
-    x = zeros(2*npoint + 1,nairfoils);
-    y = zeros(2*npoint + 1,nairfoils);
+    x = zeros(2*npoint - 1,nairfoils);
+    y = zeros(2*npoint - 1,nairfoils);
 
 
     for i = 1:nairfoils
