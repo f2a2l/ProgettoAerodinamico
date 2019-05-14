@@ -20,7 +20,7 @@ function solverHS(AirfNumb, aname, alpha, dist, crel)
 
     % TODO: check inputs size
 
-    npoint = 49; % 80
+    npoint = 80;
     U = 1;
     % -------------------------------------------------------------------------
     % Hess-Smith method (external function)

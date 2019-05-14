@@ -24,12 +24,11 @@
 %[x,y] = AirfoilShape(param);
 
 %plot(x,y)
-%xlim([0,1])
+%xlim([0,1]) 
 %axis equal
 
-function [x,y] = AirfoilShape(param)
-
-%Genera profili con IGP
+function [x,y] = AirfoilShape(param, npoint)
+%AirfoilShape - Genera profili con IGP
 
 
     c1 = param(1);
@@ -43,27 +42,31 @@ function [x,y] = AirfoilShape(param)
 
     [t1, t2, t3, t4, t5] = getThickParam(xt,T,rho0_bar,beta_te_bar);
 
-    for i = 1 : 300
+    xu = zeros(npoint,1);
+    yu = xu;
+    xl = xu;
+    yl = xu;
 
-    k = (i - 1)/(300-1);
+    for i = 1 : npoint
 
-    [xc,yc] = camberline(c1,c2,c3,c4,k);
+        k = (i - 1)/(npoint-1);
 
-    thickfun = @(x) t1 * sqrt(x) + t2 * x + t3 * x^2 + ...
-                                       t4 * x^3 + t5 * x^4;
-    t = thickfun(k);
+        [xc,yc] = camberline(c1,c2,c3,c4,k);
 
-    xu(i) = xc;
-    yu(i) = yc + 0.5 * t;
+        thickfun = @(x) t1 * sqrt(x) + t2 * x + t3 * x^2 + ...
+                                           t4 * x^3 + t5 * x^4;
+        t = thickfun(k);
 
-    xl(i) = xc;
-    yl(i) = yc - 0.5 * t;
+        xu(i) = xc;
+        yu(i) = yc + 0.5 * t;
+
+        xl(i) = xc;
+        yl(i) = yc - 0.5 * t;
 
 
     end
 
-    keyboard
-    x = [flip(xu), xl(2:end)];
-    y = [flip(yu), yl(2:end)];
+    x = [flip(xl); xu(2:end)];
+    y = [flip(yl); yu(2:end)];
 
 end

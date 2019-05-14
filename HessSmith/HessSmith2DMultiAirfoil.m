@@ -11,7 +11,7 @@ if (isempty (varargin)) && length(alpha) == 1
 
     alpha1 = alpha;
     % Airfoil discretization
-    [x, y] = AirfoilShape (aname1, npoint);
+    [x, y] = AirfoilShape(aname1, npoint);
     [p1] = Panels (x, y);
 
     % Aerodynamic Influence Coefficients Matrix [AIC]
