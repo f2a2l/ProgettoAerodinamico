@@ -31,6 +31,7 @@ __Multiple airfoil case__: `[Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha
 - _alpha_ is a row vector, containing angles of attack of the airfoils (all angles are expressed in an absolute frame).
 - _dist_ is a matrix, each row corresponding to an airfoil; columns correspond to the x and y components of the position of the leading edge, expressed in a body frame attached to the first airfoil (x axis parallel to chord, centered on the leading edge). Notice that the first airfoil is omitted (as its row would always be [0,0]), thus effectively reducing the number of rows to AirfNumb-1.
 - _crel_ is a column vector; each component corresponds to the chord of the corresponding airfoil, adimensionalised on the chord of the first airfoil. Again, first airfoil is omitted (since its row would always be [1]), and the length of the vector is AirfNumb-1.
+- _pltFlag_ is __optional__, plots airfoil geometry if `true`.
 
 Keep in mind that the chord of the first airfoil is always 1 (thus the "relative chord" of the other airfoils is effectively ther chord).
 
