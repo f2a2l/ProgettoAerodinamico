@@ -13,7 +13,9 @@ v = zeros(ntot-nairfoils,1);
 for i = 1:ntot-nairfoils 
 
     ti = [cos(p.panel(i).beta) sin(p.panel(i).beta)];
-    %CONTRIBUTO SORGENTI
+
+    %CONTRIBUTO SORGENTI 
+    
     for j = 1:ntot-nairfoils 
 
 
@@ -67,7 +69,7 @@ for i = 1:ntot-nairfoils
 end
 
 
-%vaux = zeros(nterz,nairfoils);
+vaux = zeros(nterz,nairfoils);
 
 for k = 1:nairfoils
     j = 0;

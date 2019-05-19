@@ -14,7 +14,7 @@ function [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, varargin)
 % magari lo faccio e poi lo commento prima di inserirlo in ciclo di ottimizzatore
 
 
-if length(alpha) == 1
+if length(alpha) == 1 
 
     if isempty(varargin)
         pltFlag = false; % default: do not plot
@@ -130,7 +130,7 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
     end
 
     % panels
-    for i = 1:nairfoils
+    for i = nairfoils:-1:1 % this runs backwards to avoid preallocation issues!
         [p1(i)] = Panels(x(:,i), y(:,i));
     end
     [p] = PanelsMulti(p1);
