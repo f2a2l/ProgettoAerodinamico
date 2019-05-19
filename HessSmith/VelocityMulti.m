@@ -16,7 +16,7 @@ for i = 1:ntot-nairfoils
 
     %CONTRIBUTO SORGENTI 
     
-    for j = 1:ntot-nairfoils 
+    for j = 1:ntot-nairfoils
 
 
         if (i == j)
