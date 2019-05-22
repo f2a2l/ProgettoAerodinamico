@@ -1,4 +1,4 @@
-function [u] = ConstantSource2D (sigma_J, panel_J, panels)
+function [u] = ConstantSource2D_v(sigma_J, panel_J, panels)
 
 
 %R = Rotation (panel_J.beta);
