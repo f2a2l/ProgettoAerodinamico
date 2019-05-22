@@ -1,4 +1,4 @@
-function[Cl_new,Cd_new] = corrections(Cl,Cd_0,Lambda,b,h,s,t)
+function[Cl_new,Cd_new] = FWcorrections(Cl,Cd_0,Lambda,b,h,s,t)
 % Cl = Cl before corrections
 % Cd_0 = viscous drag
 % Lambda = wing aspect ratio
