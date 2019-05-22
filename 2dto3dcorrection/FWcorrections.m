@@ -1,11 +1,14 @@
-function[Cl_new,Cd_new] = FWcorrections(Cl,Cd_0,Lambda,b,h,s,t)
+function[Cl_new,Cd_new] = FWcorrections(Cl,Cd_0,Lambda,b,h)
 % Cl = Cl before corrections
 % Cd_0 = viscous drag
 % Lambda = wing aspect ratio
-% b = wing spanwise
-% h = endplate's high
-% s = parameter taken from pag. 63 of Benzing book
-% t = parameter taken from pag. 63 of Benzing book
+% b = wing spanwise  [1010 mm]
+% h = endplate's high  [670 mm]
+% For s and t, call corr2dto3d
+% s = correction factor
+% t = correction factor
+
+[t,s] = corr2dto3d(lambda);
 
 % endplates correction
 Lambda_n = Lambda * (1 + 1.9 * h / b);
