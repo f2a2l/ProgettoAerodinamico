@@ -4,6 +4,7 @@ Credits:
 
 - HessSmith solver originally developed by Federico Messanelli (federico.messanelli@polimi.it).
 
+deleted:    FWcorrections.m
 
 ## Hess Smith: documentation
 
@@ -58,3 +59,10 @@ solverHS(80, arflPar, [3, 6], [1.05, -0.05], 0.3);
 - easy git guide: http://rogerdudler.github.io/git-guide/
 - git cheatsheet: https://github.github.com/training-kit/
 - how to ignore files with `.gitignore`: https://git-scm.com/docs/gitignore
+
+
+
+## Endplates correction: documentation
+[t,s] = corr2dto3d(lambda), where:
+- _lambda_ is the wing aspect ratio.
+This code interploates a digitized graph of t and s correction facors, provided by Benzing, Ali/Wings p.63
