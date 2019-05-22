@@ -1,4 +1,4 @@
-function [t_finale,u_out] = acceleration_DRSOFF(u_in, D, CL,CD)
+function [t_finale,u_out] = acceleration_DRSOFF(u_in, D, CL,CD,fig)
 
 % ACCELERATION_DRSOFF is a function which allows to compute time 
 % needed for acceleration from initial speed u_in. The space is given 
@@ -6,13 +6,15 @@ function [t_finale,u_out] = acceleration_DRSOFF(u_in, D, CL,CD)
 % More over, the function gives the car speed at the end of this
 % acceleration event.
 %
-%           [t_finale,u_out] = acceleration_DRSOFF(u_in, D, CL, CD)
+%           [t_finale,u_out] = acceleration_DRSOFF(u_in, D, CL, CD,fig)
 %
 % Inputs:
 % - u_in       speed at which acceleration with DRS OFF begins
 % - D          length of track before DRS activation point
 % - CL         lift coefficient of rear wing (DRS OFF)
 % - CD         drag coefficient of rear wing (DRS OFF)
+%
+% Set fig == true for plot
 
 % Import data for braking
 model
@@ -72,6 +74,7 @@ u_out = U(end);
 
 %% Plot
 
+if fig == true
 figure()
 subplot(3,1,1)
 plot(linspace(0,t_finale,length(U)),U)
@@ -103,5 +106,7 @@ grid on
 hold on
 plot(0,A_plot(1),'o','LineWidth',1)
 plot(t_finale,A_plot(end),'o','LineWidth',1)
+
+end
 
 end 

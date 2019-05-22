@@ -1,16 +1,18 @@
-function [s_finale, t_finale] = braking(u_in,u_out,CL,CD)
+function [s_finale, t_finale] = braking(u_in,u_out,CL,CD,fig)
 
 % BRAKING is a function which allows to compute space and time
 % needed for braking event, given the initial speed, the final speed and
 % lift/drag coefficients of the rear wing:
 %
-%           [s_finale, t_finale] = braking(u_in,u_out,CL,CD)
+%           [s_finale, t_finale] = braking(u_in,u_out,CL,CD,fig)
 %
 % Inputs:
 % - u_in       speed at which braking event begins
 % - u_out      turn speed --> constant along the turn
 % - CL         lift coefficient of rear wing (DRS OFF)
 % - CD         drag coefficient of rear wing (DRS OFF)
+%
+% Set fig == true for plot
 
 % Import data for braking
 model
@@ -64,6 +66,7 @@ s_finale = S(end);
 
 %% Plot
 
+if fig == true
 figure()
 subplot(3,1,1)
 plot(linspace(0,t_finale,length(U)),U)
@@ -96,4 +99,5 @@ hold on
 plot(0,F_plot(1),'o','LineWidth',1)
 plot(t_finale,F_plot(end),'o','LineWidth',1)
 
+end
 end

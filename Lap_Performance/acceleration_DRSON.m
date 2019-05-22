@@ -1,17 +1,18 @@
-function [s_finale, t_finale] = acceleration_DRSON(u_in, u_max,CL,CD)
+function [s_finale, t_finale] = acceleration_DRSON(u_in, u_max,CL,CD,fig)
 
 % ACCELERATION_DRSON is a function which allows to compute space and time 
 % needed for acceleration event when the DRS is open, from an initial
 % speed u_in to the maximum car speed u_max
 %
-%           [s_finale, t_finale] = acceleration_DRSON(u_in, u_max,CL,CD)
+%           [s_finale, t_finale] = acceleration_DRSON(u_in, u_max,CL,CD,fig)
 %
 % Inputs:
 % - u_in       speed at which acceleration with DRS ON begins
 % - u_max      maximum F1 car speed
 % - CL         lift coefficient of rear wing (DRS ON)
 % - CD         drag coefficient of rear wing (DRS ON)
-
+%
+% Set fig == true for plot
 
 % Import data for braking
 model
@@ -67,8 +68,9 @@ s_finale = S(end);
 % disp( ['Acceleration distance: ',num2str(s_finale),' m'])
 
 %% Plot
-figure()
 
+if fig == true
+figure()
 subplot(3,1,1)
 plot(linspace(0,t_finale,length(U)),U)
 title (['SUB SECTOR 2 - Acceleration Performance from ',num2str(u_in,3),' m/s to '...
@@ -99,5 +101,6 @@ grid on
 hold on
 plot(0,A_plot(1),'o','LineWidth',1)
 plot(t_finale,A_plot(end),'o','LineWidth',1)
+end
 
 end 
