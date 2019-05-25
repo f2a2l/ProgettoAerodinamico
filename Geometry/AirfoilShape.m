@@ -49,8 +49,9 @@ function [x,y] = AirfoilShape(param, npoint)
 
     for i = 1 : npoint
 
-        k = (i - 1)/(npoint-1);
-
+        %k = (i - 1)/(npoint-1);
+        k = 1 - 0.5 * (1 + cos(((i - 1) * pi) / (npoint - 1)));
+        
         [xc,yc] = camberline(c1,c2,c3,c4,k);
 
         thickfun = @(x) t1 * sqrt(x) + t2 * x + t3 * x^2 + ...
@@ -63,7 +64,7 @@ function [x,y] = AirfoilShape(param, npoint)
         xl(i) = xc;
         yl(i) = yc - 0.5 * t;
 
-
+        
     end
 
     x = [flip(xl); xu(2:end)];
