@@ -49,7 +49,7 @@ function [x,y] = AirfoilShape(param, npoint)
 
     for i = 1 : npoint
 
-        %k = (i - 1)/(npoint-1);
+        % linear - deprecated       k = (i - 1)/(npoint-1);
         k = 1 - 0.5 * (1 + cos(((i - 1) * pi) / (npoint - 1)));
         
         [xc,yc] = camberline(c1,c2,c3,c4,k);

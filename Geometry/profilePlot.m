@@ -1,46 +1,43 @@
-% Plot profile
-clc
-clear all
-close all
-
 %% Profile Selection
-fprintf(['Supported Profiles: \n\n' ...
-                '* NACA 4 digits \n' ...
-                '* NACA 5 digits \n' ...
-                '* Benzing Profiles \n\n']);
-aname = input('Profile: ','s');
+fprintf(['Please enter a set of parameters for the profile.' newline]);
+aname = input('Vector of IGP parameters (please include square brackets): ');
 
-if isempty(aname)
-    aname = 'Naca0012';
+notValidInput = false;
+lng = 8;
+
+try
+    lng = length(aname);
+catch
+    notValidInput = true;
 end
 
-%% Spacing Selection
-fprintf(['\nSpacing Law: \n\n'...
-                '[1] constant \n' ...
-                '[2] halfcos \n' ...
-                '[3] cos           <-- default \n\n']);
-spacing = input('Spacing: ','s');
+if isempty(aname)
+    warning('Using default profile.')
+    aname = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
+elseif lng ~= 8 || notValidInput
+    warning('Invalid input: switching to default')
+    aname = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
+end
 
-if isempty(spacing)
-    spacing = 'cos';
+np = input('Select number of points: ');
+
+if isempty(np)
+    warning('Using default number of points (80).')
+    np = 80;
 end
 
 %% Generate Profile Points
-[x,y] = AirfoilShape(aname,spacing);
+[x,y] = AirfoilShape(aname, np);
  
 
 %% Plot
 
-%Plot Settings
-x0=10; %x position
-y0=10; %y position
-width=1800; %x size
-height=300; %y size
-set(gcf,'position',[x0,y0,width,height])
+figure('Name','Profile geometry')
+% x0=10; %x position
+% y0=10; %y position
+% width=1800; %x size
+% height=300; %y size
+% set(gcf,'position',[x0,y0,width,height])
 
-
-
-plot(x,y)
-xlim([0,1])
-%ylim([-0.2, 0.2])
-text(0.3,mean(y),aname,'fontsize',20);
+scatter(x,y, 'filled', 'black')
+axis equal
