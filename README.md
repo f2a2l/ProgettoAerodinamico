@@ -45,7 +45,30 @@ solverHS(80, arflPar, [3, 6], [1.05, -0.05], 0.3);
 ```
 
 
+
+## Straight perfomance
+
+The straight selected for the project is the straight between turn 2 and turn 3 of Baku City Circuit.
+
+The evaluation of time needed to run this straight is performed by ```[T_sector] = sector(CL, CD, fig)```
+
+- _CL_ is a vector containing the rear wing CL when DRS is closed and when DRS is open.
+- _CD_ is a vector containing the rear wing CD when DRS is closed and when DRS is open.
+- _fig_ creates figures of straight performances if ```true```.
+
+Example: 
+
+```matlab
+CD = [1.169, 0.969];
+CL = [4.846, 4.346];
+
+[T_sector] = sector(CL, CD,true);
+```
+
+
+
 ## Coding guidelines
+
 - __never__ push code to 'origin master'
 - always run code from `ProgettoAerodinamico` folder; do not open subfolders in MATLAB
     - to do this, run the script `addPaths`; this will make all files and functions in subfolders available from the folder `ProgettoAerodinamico`
