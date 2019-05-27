@@ -8,6 +8,8 @@ deleted:    FWcorrections.m
 
 ## Hess Smith: documentation
 
+A Hess Smith solver is included in folder HessSmith. To start an UI version of this program, just run `StartUI`. Alternatively, you can access the solver as a function with the instructions below.
+
 __Single airfoil case__: `[Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, pltFlag)`, where:
 - _npoint_ is (half) the number of points used to generate geometry.
 - _aname_ is a row vector, each component corresponding to the parameters describing airfoil geometry.
