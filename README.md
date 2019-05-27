@@ -66,3 +66,23 @@ solverHS(80, arflPar, [3, 6], [1.05, -0.05], 0.3);
 [t,s] = corr2dto3d(lambda), where:
 - _lambda_ is the wing aspect ratio.
 This code interploates a digitized graph of t and s correction facors, provided by Benzing, Ali/Wings p.63
+
+## XFoil-Matlab Interface: documentation
+Matlab function that outputs xfoil results:
+
+'[polar,foil] = xfoil(coord, alpha, Re, Mach, varargin)', where:
+- _coord_ is the naca airfoil input. ex: 'NACA 0012".
+- _alpha_ is the angle of attack.
+-_Re_ is the reynodls number. If Re>0, the viscous analysis is automatically initiated.
+-_Mach_ is the Mach number.
+-_varargin_ allows other inputs suchs as: 'Npanels' or Niterations; corresponding to the number of panels for the airfoil and iterations for the analysis respectively.
+
+Outputs:
+ - a plot of the airfoil type, with its respective 'Cp vs chord' graph.
+ - CL, and Cd at the specified AoA. 
+ - CDp, the parasite drag (Skin Friction), at the specified AoA.
+ - The Cm at the specified AoA.
+ - Top_xtr and Bot_xtr, which correspond to the transition locations at top and bottom of the airfoil as a fraction of the total airfoil's chord.
+
+ 
+
