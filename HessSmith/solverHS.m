@@ -1,4 +1,4 @@
-function [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, varargin)
+function [Cl, Cd, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(npoint, aname, alpha, varargin)
 % Usage:
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha)
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, pltFlag)
@@ -26,9 +26,10 @@ if length(alpha) == 1
     % Airfoil discretization and plotting
     [x, y] = AirfoilShape(aname1, npoint);
     [p1] = Panels(x, y);
+    p = [];
     if pltFlag
         figure('Name','Profile geometry','NumberTitle','off')
-        plot(x,y, 'black')
+        scatter(x,y, 'filled', 'black')
         axis equal
         hold off
     end
@@ -122,7 +123,7 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
         hold on
         axis equal
         for i = 1:nairfoils
-            plot(x(:,i),y(:,i), 'black')
+            scatter(x(:,i),y(:,i), 'filled', 'black')
         end
         hold off
     end
