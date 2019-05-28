@@ -1,9 +1,7 @@
-function [Cl, Cd, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(npoint, aname, alpha, varargin)
+function [Cl, Cd, Cp, xmax, maxdCp, x, y, p, p1, SOL] = solverHS(npoint, aname, alpha, varargin)
 % Usage:
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha)
-% - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, pltFlag)
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, dist, crel)
-% - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, dist, crel, pltFlag)
 
 % maxdCp is a matrix; each row corresponds to an airfoil, first column corresponds to
 % lower part, second column corresponds to upper part
@@ -12,13 +10,7 @@ function [Cl, Cd, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(npoint, aname, alpha,
 % magari lo faccio e poi lo commento prima di inserirlo in ciclo di ottimizzatore
 
 
-if length(alpha) == 1
-
-    if isempty(varargin)
-        pltFlag = false; % default: do not plot
-    else
-        pltFlag = varargin{1};
-    end
+if length(alpha) == 1 && isempty(varargin)
 
     aname1 = aname(1, :);
     alpha1 = alpha;
@@ -27,12 +19,6 @@ if length(alpha) == 1
     [x, y] = AirfoilShape(aname1, npoint);
     [p1] = Panels(x, y);
     p = [];
-    if pltFlag
-        figure('Name','Profile geometry','NumberTitle','off')
-        scatter(x,y, 'filled', 'black')
-        axis equal
-        hold off
-    end
 
     % Aerodynamic Influence Coefficients Matrix [AIC]
     [AIC] = AICMatrix (p1);
@@ -59,9 +45,7 @@ if length(alpha) == 1
     % Aerodynamic coefficients
     [Cl, Cd] = Loads(p1, Cp, alpha1); % omitted arguments: Cm, CmLE
 
-    
-elseif (isempty(varargin)) && length(alpha) > 1
-    error('no distance specified!')
+
 
 
 elseif (~isempty(varargin)) && length(alpha) >= 2
@@ -70,63 +54,11 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
     nairfoils = length(alpha);
 
     % Load inputs
-    if length(varargin) == 2
-        dist = varargin{1};
-        crel = varargin{2};
-        pltFlag = false; % default: do not plot
-    elseif length(varargin) == 3
-        dist = varargin{1};
-        crel = varargin{2};
-        pltFlag = varargin{3}; % default: do not plot
-    end
-    
-    % security check FIXME: sicuramente sbagliato, forse togli
-    for i = 1 : nairfoils-2
-        if dist(i+1,1) - dist(i,1) < 1 && abs(dist(i,2) - dist(i+1,2)) < 0.5
-            error('Airfoils are too close, overlapped or not in the right order!')
-        end
-    end
+    dist = varargin{1};
+    crel = varargin{2};
 
-    % preallocation of airfoil shape
-    x = zeros(2*npoint - 1, nairfoils);
-    y = zeros(2*npoint - 1, nairfoils);
-
-    % get airfoil shape
-    for i = 1:nairfoils
-        [x(:,i), y(:,i)] = AirfoilShape(aname(i,:), npoint);
-        if i > 1
-            x(:,i) = crel(i-1) * x(:,i);
-            y(:,i) = crel(i-1) * y(:,i);
-        end
-    end
-
-    % resize airfoils and apply angle of attack
-    for i = 2:nairfoils
-
-        alpha_rel = alpha(i) - alpha(1);
-
-        R= [cos(alpha_rel*pi/180) sin(alpha_rel*pi/180);
-            -sin(alpha_rel*pi/180) cos(alpha_rel*pi/180)];
-
-        coord_mat = [x(:,i), y(:,i)]';
-        coord_mat = R * coord_mat;
-        coord_mat = coord_mat';
-
-        x(:,i) = coord_mat(:,1) + dist(i-1,1);
-        y(:,i) = coord_mat(:,2) + dist(i-1,2);
-
-    end
-
-    % plot airfoils
-    if pltFlag
-        figure('Name','Multi element profile geometry','NumberTitle','off')
-        hold on
-        axis equal
-        for i = 1:nairfoils
-            scatter(x(:,i),y(:,i), 'filled', 'black')
-        end
-        hold off
-    end
+    % get multi geometry
+    [x,y, xmax] = multiGeometry(npoint, aname, alpha, dist, crel);
 
     % panels
     for i = nairfoils:-1:1 % this runs backwards to avoid preallocation issues!
@@ -170,7 +102,7 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
 
 
 else  
-    error('ERROR! Wrong input number')
+    error('wrong input; see documentation for instructions on how to use this function.')
 end
 
 
