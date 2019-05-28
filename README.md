@@ -91,3 +91,24 @@ CL = [4.846, 4.346];
 [t,s] = corr2dto3d(lambda), where:
 - _lambda_ is the wing aspect ratio.
 This code interploates a digitized graph of t and s correction facors, provided by Benzing, Ali/Wings p.63
+
+## Xfoil-Matlab Interface: documentation.
+
+The following is a function that prints out the outputs in Matlab from an XFoil analysis. 
+
+`[polar, foil] = xfoil(coord,alpha,Re,Mach,varargin)`, where:
+
+-_coord_ is the Naca airfoil type. ex: 'NACA 0012'. The four parameters can be modified to obtain the desired shape.
+-_alpha_ is the angle of attack.
+-_Re_ is the Reynolds number. If Re>0, the viscous analysis is automatically initiated.
+-_Mach_ is the Mach number.
+-_varargin_ allows the addition of other inputs such as 'Npanels' or 'Niter', corresponding to the number of panels for the airfoil, and 
+the number of maximum iterations for the analysis..
+
+Outputs:
+
+- A plot of the airfoil countour with the correponding pressure distribution along its chord. 'Cp vs c/x' plot.
+- Cl and Cd (lift and drag coefficients) at the specified AoA.
+- Cdp - parasite drag coefficient (skin friction drag) , if viscous analysis is performed.
+- Cm - moment coefficient at the specified AoA.
+- Top_xtr and Bot_xtr: the top and bottom flow transition locations as a fraction of the airfoil's chord.
