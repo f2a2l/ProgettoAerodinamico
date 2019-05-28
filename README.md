@@ -48,7 +48,30 @@ solverHS(80, arflPar, [3, 6], [1.05, -0.05], 0.3);
 ```
 
 
+
+## Straight perfomance
+
+The straight selected for the project is the straight between turn 2 and turn 3 of Baku City Circuit.
+
+The evaluation of time needed to run this straight is performed by ```[T_sector] = sector(CL, CD, fig)```
+
+- _CL_ is a vector containing the rear wing CL when DRS is closed and when DRS is open.
+- _CD_ is a vector containing the rear wing CD when DRS is closed and when DRS is open.
+- _fig_ creates figures of straight performances if ```true```.
+
+Example: 
+
+```matlab
+CD = [1.169, 0.969];
+CL = [4.846, 4.346];
+
+[T_sector] = sector(CL, CD,true);
+```
+
+
+
 ## Coding guidelines
+
 - __never__ push code to 'origin master'
 - always run code from `ProgettoAerodinamico` folder; do not open subfolders in MATLAB
     - to do this, run the script `addPaths`; this will make all files and functions in subfolders available from the folder `ProgettoAerodinamico`
@@ -75,12 +98,12 @@ The following is a function that prints out the outputs in Matlab from an XFoil 
 
 `[polar, foil] = xfoil(coord,alpha,Re,Mach,varargin)`, where:
 
--_coord_ is the Naca airfoil type. ex: 'NACA 0012'. The four parameters can be modified to obtain the desired shape.
--_alpha_ is the angle of attack.
--_Re_ is the Reynolds number. If Re>0, the viscous analysis is automatically initiated.
--_Mach_ is the Mach number.
--_varargin_ allows the addition of other inputs such as 'Npanels' or 'Niter', corresponding to the number of panels for the airfoil, and 
-the number of maximum iterations for the analysis..
+
+- _coord_ is the Naca airfoil type. ex: 'NACA 0012'. The four parameters can be modified to obtain the desired shape.
+- _alpha_ is the angle of attack.
+- _Re_ is the Reynolds number. If Re>0, the viscous analysis is automatically initiated.
+- _Mach_ is the Mach number.
+- _varargin_ allows the addition of other inputs such as 'Npanels' or 'Niter', corresponding to the number of panels for the airfoil, and the number of maximum iterations for the analysis.
 
 Outputs:
 
@@ -90,3 +113,4 @@ Outputs:
 - Cm - moment coefficient at the specified AoA.
 - Top_xtr and Bot_xtr: the top and bottom flow transition locations as a fraction of the airfoil's chord.
 - Cf (Coefficient of friction) values and graph with respect to the airfoil's chord. 
+
