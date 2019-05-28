@@ -47,9 +47,7 @@ arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5;
 
 
 
-
-
-## Hess smith solver
+## Hess smith solver
 
 A Hess Smith solver is included in folder `HessSmith`. To start an UI version of this program, just run `StartHS` (after running `addPaths`). Alternatively, you can access the solver as a function with the instructions below.
 
