@@ -98,12 +98,12 @@ The following is a function that prints out the outputs in Matlab from an XFoil 
 
 `[polar, foil] = xfoil(coord,alpha,Re,Mach,varargin)`, where:
 
+
 - _coord_ is the Naca airfoil type. ex: 'NACA 0012'. The four parameters can be modified to obtain the desired shape.
 - _alpha_ is the angle of attack.
 - _Re_ is the Reynolds number. If Re>0, the viscous analysis is automatically initiated.
 - _Mach_ is the Mach number.
-- _varargin_ allows the addition of other inputs such as 'Npanels' or 'Niter', corresponding to the number of panels for the airfoil, and 
-the number of maximum iterations for the analysis..
+- _varargin_ allows the addition of other inputs such as 'Npanels' or 'Niter', corresponding to the number of panels for the airfoil, and the number of maximum iterations for the analysis.
 
 Outputs:
 
@@ -112,3 +112,5 @@ Outputs:
 - Cdp - parasite drag coefficient (skin friction drag) , if viscous analysis is performed.
 - Cm - moment coefficient at the specified AoA.
 - Top_xtr and Bot_xtr: the top and bottom flow transition locations as a fraction of the airfoil's chord.
+- Cf (Coefficient of friction) values and graph with respect to the airfoil's chord. 
+
