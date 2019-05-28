@@ -4,7 +4,7 @@ Credits:
 
 - HessSmith solver originally developed by Federico Messanelli (federico.messanelli@polimi.it).
 
-deleted:    FWcorrections.m
+
 
 ## Multi-element geometry
 
@@ -16,6 +16,8 @@ To deal with multiple geometries, the following conventions have been adopted:
   - x axis passing through the trailing edge of the first profile, pointing towards it;
     - this means that the point (1,0) corresponds to the trailing edge of the first profile;
   - y axis consequently.
+  
+ 
 
 Function `multiGeometry` can be found in folder `Geometry`; it can be used as such:
 
