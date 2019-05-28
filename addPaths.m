@@ -2,5 +2,6 @@
 % can be accessed from parent directory. Please run this script at the beginning of any session.
 
 addpath('HessSmith')
-addpath('DynMod')
+addpath('Lap_Performance')
 addpath('Geometry')
+addpath('2dto3dcorrection')

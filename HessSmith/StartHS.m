@@ -1,4 +1,4 @@
-function StartUI()
+function StartHS()
 
 % Hess-Smith panel method for multi-airfoil case: the software allows to consider
 % single or multi airfoil case, with an indefinite number of airfoils. For
@@ -21,19 +21,23 @@ if AirfNumb > 1
     crel = zeros(1, AirfNumb-1);
 end
 
-disp([newline 'Please enter the (row) vector of parameters of the airfoil; do include square brackets.' newline])
+disp(newline)
 for ii = 1:AirfNumb
     disp(['Insert profile ' int2str(ii)])
     disp('----------------')
-    aname(ii,:) = input('Profile parameters: \n');
+    aname(ii,:) = input('Please enter the (row) vector of parameters of the airfoil - do include square brackets: \n');
     alpha(ii) = input('Angle of attack: \n');
     if ii > 1
-      dist(ii-1,1) = input('x position of leading edge: \n');
-      dist(ii-1,2) = input('y position: \n');
-      crel(ii-1) = input('Relative chord wrt first profile: \n');
+        disp('Please keep in mind that x and y axes are attached to (hence rotate with) the first profile.')
+        dist(ii-1,1) = input('x position of leading edge wrt trailing edge of the first profile: \n');
+        dist(ii-1,2) = input('y position: \n');
+        crel(ii-1) = input('Relative chord wrt first profile: \n');
     end
     disp(newline)
 end
+disp(['Do you want to show nodes on the airfoil surface on the plot?'])
+showNodes = input('Please type 1 for yes, 0 for no: ');
+disp(newline)
 
 
 
@@ -41,36 +45,16 @@ end
 % Hess-Smith method (external function)
 
 if AirfNumb == 1
-    [Cl, Cd, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(80, aname, alpha, true);
+    [Cl, Cd, ~, ~, ~, x, y, p, p1, SOL] = solverHS(80, aname, alpha, true);
 else
-    [Cl, Cd, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(80, aname, alpha, dist, crel, true);
+    [Cl, Cd, ~, ~, ~, x, y, p, p1, SOL] = solverHS(80, aname, alpha, dist, crel, true);
 end
 
 
 
 % -------------------------------------------------------------------------
 % post processing and plot 
-    
-% nairfoils = AirfNumb;
-% x0 = -1.1;
-% yVel = [min(dist(:,2))-1:0.25:max(dist(:,2))+1]';
-% xVel = -1.1*ones(length(yVel),1);
-% unitVect = ones(length(yVel),1);
-% for j = 1:nairfoils
-%     
-%     figure(99)
-%     plot(x(:,j),y(:,j),'-','color',rand(1,3),'linewidth',2)
-%     axis equal
-%     axis([-1 max(dist(:,1))+1 min(dist(:,2))-1 max(dist(:,2))+1])
-%     hold on
-%     xlabel('x/c')
-%     ylabel('y/c')
-%     quiver(xVel, yVel, cos(alpha(1)*pi/180)*unitVect, sin(alpha(1)*pi/180)*unitVect,'r','linewidth',2)
-% 
-% end
-%   
-% 
-% 
+
 
 if AirfNumb == 1
     [uField,vField, Xgrid, Ygrid] = velocityField(p1, p1, alpha, 1, SOL, x, y);
@@ -92,36 +76,21 @@ strCd = [];
 for j = 1:AirfNumb
 
     plot(x(:,j),y(:,j),'-','color',rand(1,3),'linewidth',2)
+    if showNodes
+        scatter(x(:,j),y(:,j), '.', 'black')
+    end
     axis equal
     
     strCl = [strCl num2str(Cl(j))];
     strCd = [strCd num2str(Cd(j))];
 
     if j~=AirfNumb
-        strCl = [strCl ' '];
-        strCd = [strCd ' '];
+        strCl = [strCl '   '];
+        strCd = [strCd '   '];
     end
 
-    title([newline 'CL: ' strCl newline 'CD: ' strCd newline newline])
+    title([newline 'CL (left to right):   ' strCl newline 'CD (left to right):   ' strCd newline newline])
 
 end
-
-
-% 
-%   
-% figure()
-% quiver(Xgrid,Ygrid,uField,vField)
-% hold on
-% for j = 1:nairfoils
-% 
-%     plot(x(:,j),y(:,j),'-','color',rand(1,3),'linewidth',2)
-%     axis equal
-%     axis([-1 dist(end,1)+1.5 min(dist(:,2))-0.5 max(dist(:,2))+0.5])
-%     hold on
-%     xlabel('x/c')
-%     ylabel('y/c')
-%     quiver(xVel, yVel, cos(alpha(1)*pi/180)*unitVect, sin(alpha(1)*pi/180)*unitVect,'r','linewidth',2)
-% 
-% end
 
 end
