@@ -89,3 +89,4 @@ Outputs:
 - Cdp - parasite drag coefficient (skin friction drag) , if viscous analysis is performed.
 - Cm - moment coefficient at the specified AoA.
 - Top_xtr and Bot_xtr: the top and bottom flow transition locations as a fraction of the airfoil's chord.
+- Cf (Coefficient of friction) values and graph with respect to the airfoil's chord. 
