@@ -39,7 +39,7 @@ dt = 0.0001;
 acc_max =@(u) mu * (g + (zeta)/m * u.^2 ) + eta / m * u.^2;
 
 % Imposition of maximum acceleration (g)
-a_lim = 1.1 * 9.81; % [m/s^2]
+a_lim = 1.2 * 9.81; % [m/s^2]
 A_plot = acc_max(u_in);
 
 while (u <= u_max)
