@@ -46,7 +46,7 @@ function [x, y, totLength] = multiGeometry(npoint, aname, alpha, dist, crel, var
         hold on
         axis equal
         for i = 1:nairfoils
-            scatter(x(:,i),y(:,i), 'filled', 'black')
+            scatter(x(:,i),y(:,i), '.', 'black')
         end
         hold off
     end

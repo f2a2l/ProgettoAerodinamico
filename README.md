@@ -6,46 +6,110 @@ Credits:
 
 deleted:    FWcorrections.m
 
-## Hess Smith: documentation
+## Multi-element geometry
 
-A Hess Smith solver is included in folder HessSmith. To start an UI version of this program, just run `StartUI`. Alternatively, you can access the solver as a function with the instructions below.
+To deal with multiple geometries, the following conventions have been adopted:
 
-__Single airfoil case__: `[Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, pltFlag)`, where:
-- _npoint_ is (half) the number of points used to generate geometry.
-- _aname_ is a row vector, each component corresponding to the parameters describing airfoil geometry.
+- the reference aerodynamic length is the chord of the first (upstream) profile, and it’s unitary (= 1).
+- a reference system attached to the first (upstream) profile is defined:
+  - origin on the leading edge of the first profile;
+  - x axis passing through the trailing edge of the first profile, pointing towards it;
+    - this means that the point (1,0) corresponds to the trailing edge of the first profile;
+  - y axis consequently.
+
+Function `multiGeometry` can be found in folder `Geometry`; it can be used as such:
+
+```MATLAB
+[x, y, totLength] = multiGeometry(npoint, arflPar, alpha, dist, crel, pltFlag);
+```
+
+Input arguments:
+
+- _npoint_ is half the number of nodes (actually, the number of nodes on the camber line, which thus define nodes on the edge of the profile).
+- _arflPar_ is a matrix, each row corresponding to an airfoil (no. rows = no. airfoils); the 8 columns represent the 8 parameters needed by IGP parametrisation.
+- _alpha_ is a row vector, containing angles of attack of the airfoils (all angles are expressed in an absolute frame).
+- _dist_ is a matrix, each row corresponding to an airfoil; however, the first one is omitted, so that the number of rows is the the number of airfoils -1. Each row contains the distance vector of the corresponding profile from the trailing edge of the first one; columns correspond to the x and y components (expressed in the above mentioned frame).
+- _crel_ is a column vector, each row/component corresponding to an airfoil; however, the first one is omitted, so that the number of rows/components is the the number of airfoils -1. Each component represents the chord of the corresponding profile adimensionalised over the chord of the first profile. Since the latter has unit chord, each component effectively contains the chord of the corresponding profile.
+- _pltFlag_ is a boolean __optional__ input argument; if `true`, plots the geometry with nodes.
+
+Outputs:
+
+- _x_ and _y_ are matrices containing x and y coordinates for the nodes of each profile (using the above mentioned frame). Each column corresponds to a profile, each row to a node.
+- _totLength_ is the maximum value of _x_ found in the above mentioned matrix; in other words, it is the total length of the multi-element profile, measured along the x axis (defined above). Keep in mind that $x = 1$ is the trailing edge of the first profile.
+
+Example with two airfoils:
+
+```MATLAB
+arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5;
+					 0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
+[x, y, totLength] = multiGeometry(80, arflPar, [3 10], [-0.05 -0.05], 0.3, true);
+```
+
+
+
+
+
+## Hess smith solver
+
+A Hess Smith solver is included in folder `HessSmith`. To start an UI version of this program, just run `StartHS` (after running `addPaths`). Alternatively, you can access the solver as a function with the instructions below.
+
+
+
+### Using the solver
+
+Function `solverHS` takes different inputs depending whether it is used for a single or multiple airfoils:
+
+
+
+__Single airfoil case__: `[...] = solverHS(npoint, arflPar, alpha)`, where:
+- _npoint_ is half the number of points used to generate geometry.
+- _arflPar_ is a row vector, each component corresponding to the parameters describing airfoil geometry.
 - _alpha_ is the angle of attack.
-- _pltFlag_ is __optional__, plots airfoil geometry if `true`.
-
-As for the outputs:
-
-- _Cl_ and _Cd_ are of course the coefficients of lift and drag of the profile.
-- _Cp_ contains the chord distribution of pressure coefficient (possibly deprecated).
-- _maxdCp_ is a matrix containing values of maximum $\Delta C_P$; each row corresponds to an airfoil, first column corresponts to lower part, second column to upper part.
 
 Example:
 ```MATLAB
 arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
-solverHS(80, arflPar, 3);
+[Cl, Cd] = solverHS(80, arflPar, 3);
 ```
 
-__Multiple airfoil case__: `[Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, dist, crel, pltFlag)`, where:
-- _npoint_ is (half) the number of points used to generate geometry.
-- _aname_ is a matrix, each row corresponding to an airfoil (no. rows = AirfNumb) and containing the parameters needed to define the airfoil.
-- _alpha_ is a row vector, containing angles of attack of the airfoils (all angles are expressed in an absolute frame).
-- _dist_ is a matrix, each row corresponding to an airfoil; columns correspond to the x and y components of the position of the leading edge, expressed in a body frame attached to the first airfoil (x axis parallel to chord, centered on the leading edge). Notice that the first airfoil is omitted (as its row would always be [0,0]), thus effectively reducing the number of rows to AirfNumb-1.
-- _crel_ is a column vector; each component corresponds to the chord of the corresponding airfoil, adimensionalised on the chord of the first airfoil. Again, first airfoil is omitted (since its row would always be [1]), and the length of the vector is AirfNumb-1.
-- _pltFlag_ is __optional__, plots airfoil geometry if `true`.
 
-Keep in mind that the chord of the first airfoil is always 1 (thus the "relative chord" of the other airfoils is effectively ther chord).
 
-For the outputs, see single airfoil case.
+__Multiple airfoil case__: `[...] = solverHS(npoint, aname, alpha, dist, crel)`; the inputs are exactly the same as the ones used for `multiGeometry` (see above).
 
 Example:
+
 ```MATLAB
 arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5;
            0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
-solverHS(80, arflPar, [3, 6], [1.05, -0.05], 0.3);
+[Cl, Cd] = solverHS(80, arflPar, [3, 6], [-0.05, -0.05], 0.3);
 ```
+
+
+
+### Outputs
+
+In most cases, it is sufficient to use (just like the examples above): 
+
+```MATLAB	
+[Cl, Cd] = solverHS(...)
+```
+
+_Cl_ and _Cd_ are column vectors containing the coefficients of lift and drag of each profile.
+
+However, the full list of output is the following:
+
+```MATLAB
+[Cl, Cd, totLength, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(...)
+```
+
+Any of them can be arbitrarily omitted, either by truncating the list of output arguments or by inserting `~` instead of them. Here’s a brief explaination of each output:
+
+- _totLength_, _x_ and _y_ are the same as in `multiGeometry`.
+- _Cp_ contains the chord distribution of pressure coefficient (possibly deprecated).
+- _maxdCp_ is a matrix containing values of maximum $\Delta C_P$; each row corresponds to an airfoil, first column corresponts to lower part, second column to upper part.
+- _p_, _p1_ are classes containing information about the panelisation; _SOL_ is the solution of the linear system associated to each geometry. These outputs are not meant for extarnal usage; however, they are used by the UI programs `StartHS`.
+
+
 
 
 
@@ -65,25 +129,10 @@ Example:
 CD = [1.169, 0.969];
 CL = [4.846, 4.346];
 
-[T_sector] = sector(CL, CD,true);
+[T_sector] = sector(CL, CD, true);
 ```
 
 
-
-## Coding guidelines
-
-- __never__ push code to 'origin master'
-- always run code from `ProgettoAerodinamico` folder; do not open subfolders in MATLAB
-    - to do this, run the script `addPaths`; this will make all files and functions in subfolders available from the folder `ProgettoAerodinamico`
-    - it might be useful to run `addPaths` even before programming, so that MATLAB linter can correctly access all files in subfolders
-- keep in mind that commands such `checkout` and `pull` __overwrite your files__
-- commit often and use meaningful commit messages
-- __test your code__ before committing
-
-## Useful stuff
-- easy git guide: http://rogerdudler.github.io/git-guide/
-- git cheatsheet: https://github.github.com/training-kit/
-- how to ignore files with `.gitignore`: https://git-scm.com/docs/gitignore
 
 
 
@@ -91,6 +140,10 @@ CL = [4.846, 4.346];
 [t,s] = corr2dto3d(lambda), where:
 - _lambda_ is the wing aspect ratio.
 This code interploates a digitized graph of t and s correction facors, provided by Benzing, Ali/Wings p.63
+
+
+
+
 
 ## Xfoil-Matlab Interface: documentation.
 

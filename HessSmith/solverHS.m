@@ -1,4 +1,4 @@
-function [Cl, Cd, Cp, xmax, maxdCp, x, y, p, p1, SOL] = solverHS(npoint, aname, alpha, varargin)
+function [Cl, Cd, xmax, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(npoint, aname, alpha, varargin)
 % Usage:
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha)
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, dist, crel)
