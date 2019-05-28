@@ -35,5 +35,15 @@ CDp = polar.CDp %Parasite Drag (Skin Friction)
 Cm = polar.Cm
 Top_xtr = polar.Top_xtr % Location of transition flow on top.
 Bot_xtr = polar.Bot_xtr % Location of transition flow on bottom.
+CF = foil.Cf;
+
+%plot(foil(1).xcp(:,end),foil(1).cp(:,end)); 
+
+figure
+plot(foil(1).x(:,end),foil.Cf);
+title('Cf vs x/c')
+xlabel('x/c')
+ylabel('Cf')
+legend(sprintf('Top_t_r_a_n_s_i_t_i_o_n = %s ;  Bottom_t_r_a_n_s_i_t_i_o_n = %g', polar.Top_xtr, polar.Bot_xtr))
 
 
