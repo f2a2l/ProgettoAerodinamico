@@ -3,5 +3,5 @@ nvars = 2;
 rng default % For reproducibility
 lb = [-50;-50];
 ub = -lb;
-options = optimoptions('particleswarm','SwarmSize',100);
+options = optimoptions('particleswarm','SwarmSize',5000,'PlotFcn','pswplotbestf');
 [x,fval,exitflag] = particleswarm(fun,nvars,lb,ub,options)
