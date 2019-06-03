@@ -1,6 +1,6 @@
 %% Particle Swarm Optimization Procedure for F1 Rear Wing Design
 
-fun = @lapTime;
+fun = @lapTime_objFun;
 nvars = 21;
 optiPAR; %as output: lb and ub. Here it is possibile to define boundaries for optimization
 
