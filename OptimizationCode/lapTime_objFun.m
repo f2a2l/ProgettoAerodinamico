@@ -38,7 +38,7 @@ function [t] = lapTime_objFun(param)
     %TODO
     
     %% Check Quality of results
-    if min(Cl_new,Cd_new) > 0 && isreal(Cl_new) && isreal(Cd_new)
+    if min(min(Cl,Cd)) > -1 && isreal(Cl) && isreal(Cd)
     
     %% 2D to 3D Correction
     b = 1.010; %wing span
