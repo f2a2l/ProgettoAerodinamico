@@ -37,6 +37,9 @@ function [t] = lapTime_objFun(param)
     %% XFOIL correction
     %TODO
     
+    %% Check Quality of results
+    if min(Cl_new,Cd_new) > 0 && isreal(Cl_new) && isreal(Cd_new)
+    
     %% 2D to 3D Correction
     b = 1.010; %wing span
     h = 0.67; %endplate height
@@ -46,5 +49,10 @@ function [t] = lapTime_objFun(param)
     
     %% Lap Time Calculation
     [t] = sector(Cl_new, Cd_new,fig);
+    
+    
+    else
+        t = 10000;
+    end
     
 end
