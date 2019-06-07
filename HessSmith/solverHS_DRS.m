@@ -57,9 +57,9 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
     crel = varargin{2};
 
     % get multi geometry and open DRS
-    [x,y, xmax] = multiGeometry(npoint, aname, alpha, dist, crel);
-    DRS_angle = alpha(2) - alpha(1);
-    [x, y] = DRS_OPEN(x,y,DRS_angle);
+    [x,y, xmax] = multiGeometry_DRS(npoint, aname, alpha, dist, crel);
+    %DRS_angle = alpha(2) - alpha(1);
+    %[x, y] = DRS_OPEN(x,y,DRS_angle);
 
     % panels
     for i = nairfoils:-1:1 % this runs backwards to avoid preallocation issues!
