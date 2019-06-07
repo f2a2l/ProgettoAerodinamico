@@ -36,6 +36,14 @@ CL = CL_car + CL;
 CD = CD_car + CD; 
 
 
+if length(CL) ~= 2 
+    CL = [CL, CL];
+end
+if length(CD) ~= 2
+    CD = [CD, CD];
+end
+
+
 % Compute maximum speed
 u_max = max_speed(CD(2),fig);   % [m/s]    maximum car speed
 
