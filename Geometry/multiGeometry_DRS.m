@@ -40,7 +40,7 @@ function [x, y, totLength] = multiGeometry_DRS(npoint, aname, alpha, dist, crel,
 
     end
 
-    
+    % rotate flap airfoil along T.E. (hinge point)
     DRS_angle = alpha(2) - alpha(1);
     [x, y] = DRS_OPEN(x,y,DRS_angle);
     
