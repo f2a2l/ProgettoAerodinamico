@@ -1,5 +1,5 @@
 function [t] = lapTime_objFun(param)
-    
+tic;   
     %% Unpacking param into Optimization Parameters
     c1_main = param(1,1);
     c2_main = param(1,2);
@@ -32,19 +32,23 @@ function [t] = lapTime_objFun(param)
     %% Hess-Smith Calculation
     n_points = 80;
     
-    [Cl,Cd,totLength,~,~,~,~,~,~,~] = solverHS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap)
-
+    [Cl,Cd,totLength,~,~,~,~,~,~,~] = solverHS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap);
+    [Cl_DRS,Cd_DRS,totLength,~,~,~,~,~,~,~] = solverHS_DRS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap);
+    
+    Cl = [Cl, Cl_DRS];
+    Cd = [Cd, Cd_DRS];
+    
     %% XFOIL correction
     %TODO
     
     %% Check Quality of results
-    if min(min(Cl,Cd)) > -1 && isreal(Cl) && isreal(Cd)
+    if min(min(min(Cl,Cd))) > -1 && isreal(Cl) && isreal(Cd)
     
     %% 2D to 3D Correction
     b = 1.010; %wing span
     h = 0.67; %endplate height
     lambda = b / totLength;
-    [Cl_new,Cd_new] = FWcorrections(Cl,Cd,lambda,b,h)
+    [Cl_new,Cd_new] = FWcorrections(Cl,Cd,lambda,b,h);
     fig=0;
     
     %% Lap Time Calculation
@@ -54,5 +58,5 @@ function [t] = lapTime_objFun(param)
     else
         t = 10000;
     end
-    
+toc;    
 end
