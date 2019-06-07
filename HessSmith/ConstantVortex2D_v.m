@@ -1,8 +1,5 @@
 function [u] = ConstantVortex2D_v(gamma_J, panel_J, panels)
 
-%
-
-%R = Rotation (panel_J.beta);
 
 x1 = -panel_J.d/2;
 x2 = panel_J.d/2;
@@ -11,7 +8,7 @@ CPan = [panels.C];
 
 P_I = panel_J.R*[[CPan.x]-panel_J.C.x; [CPan.y]-panel_J.C.y];
 
-[upx, upy] = ConstantVortex2D_local (gamma_J, x1, x2, P_I(1,:), P_I(2,:));
+[upx, upy] = ConstantVortex2D_local(gamma_J, x1, x2, P_I(1,:), P_I(2,:));
 
 u = panel_J.R'*[upx; upy];
 
