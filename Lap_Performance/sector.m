@@ -84,10 +84,7 @@ t_SB3 = s_SB3 / u_max;
 %    SB1    SB2      SB3     SB4
 T_sector = t_SB1 + t_SB2 + t_SB3 + t_SB4;
 
-%Invalidate irrealistic results
-else
-    T_sector = 1000;
-end
+
 
 %% Display results
 fprintf('\n')
@@ -112,4 +109,11 @@ disp('--------------------------')
 disp(['| Sector time: ',num2str(T_sector),' s |']) 
 disp('--------------------------')
 
+%Invalidate irrealistic results
+else
+    
+disp('------IRREALISTIC RESULT------')
+disp('INVALIDATED!!!!')
+    T_sector = 1000;
+end
 end
