@@ -41,8 +41,8 @@ max_beta_TE = [3 3]; %default = 4.8724;
 step_beta_TE = [0.1 0.1];
 
 %% AoA main and flap - Angle of attack
-min_AoA = [-5 -30];
-max_AoA = [25; -70];
+min_AoA = [-5 30];
+max_AoA = [25 70];
 step_AoA = [1 -1];
 
 %% Slot Definition -- CHECK AXES DEFINITION OF IGP
@@ -52,7 +52,7 @@ step_x = 0.01;
 
 min_y = 0.01;
 max_y = 0.016;
-step_y = 0.1;
+step_y = 0.01;
 
 %% Flap Chord - (fraction of main airfoil chord, namely c = 1)
 min_c_flap = 0.2;

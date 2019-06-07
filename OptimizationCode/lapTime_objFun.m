@@ -11,7 +11,7 @@ function [t] = lapTime_objFun(c1_main,c2_main,c3_main,c4_main,x_t_main,T_main,rh
     %% Hess-Smith Calculation
     n_points = 80;
     
-    [Cl,Cd,totLength,~,~,~,~,~,~,~] = solverHS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap);
+    [Cl,Cd,totLength,~,~,~,~,~,~,~] = solverHS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap)
 
     %% XFOIL correction
     %TODO
@@ -20,9 +20,10 @@ function [t] = lapTime_objFun(c1_main,c2_main,c3_main,c4_main,x_t_main,T_main,rh
     b = 1.010; %wing span
     h = 0.67; %endplate height
     Lambda = b / totLength;
-    [Cl_new,Cd_new] = FWcorrections(Cl,Cd,Lambda,b,h);
+    [Cl_new,Cd_new] = FWcorrections(Cl,Cd,Lambda,b,h)
+    fig=0;
     
     %% Lap Time Calculation
-    [t] = sector(Cl_new, Cd_new);
+    [t] = sector(Cl_new, Cd_new,fig);
     
 end
