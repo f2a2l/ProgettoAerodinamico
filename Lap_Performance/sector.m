@@ -56,6 +56,8 @@ fprintf('\n')
 
 %% Sub sectors
 
+if u_max*3.6 < 370
+    
 %%% Acceleration - DRS OFF %%%
 % Compute time to reach DRS activation point at a distance D from turn 2
 % and compute speed when DRS is activated
@@ -81,6 +83,11 @@ t_SB3 = s_SB3 / u_max;
 % Sector time is the sum of all sub sector times
 %    SB1    SB2      SB3     SB4
 T_sector = t_SB1 + t_SB2 + t_SB3 + t_SB4;
+
+%Invalidate irrealistic results
+else
+    T_sector = 1000;
+end
 
 %% Display results
 fprintf('\n')
