@@ -2,16 +2,24 @@ function [p] = PanelsMulti(p1)
 
 
 nairfoil = length(p1);
-npoints = length(p1(1).panel);
 
 p = struct;
 
-ntot = nairfoil*npoints;
+% get no pts for each airfoil
+nptzsa = zeros(1,nairfoil); 
+for ii = 1:nairfoil
+    nptzsa(ii) = length(p1(ii).panel);
+end
 
-nterz = (ntot-nairfoil)/nairfoil;
+ntot = sum(nptzsa);
+
+% nterz = (ntot-nairfoil)/nairfoil;
 
                
 for k = 1:nairfoil
+
+    npoints = nptzsa(ii);
+    nterz = npoints - 1;
 
     for j = 1:(npoints-1)
         i = ((k-1)*nterz + j);

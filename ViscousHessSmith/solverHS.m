@@ -61,8 +61,8 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
     [x,y, xmax] = multiGeometry(npoint, aname, alpha, dist, crel);
 
     % panels
-    for i = nairfoils:-1:1 % this runs backwards to avoid preallocation issues!
-        [p1(i)] = Panels(x(:,i), y(:,i));
+    for i = 1:nairfoils % this runs backwards to avoid preallocation issues!
+        [p1(i)] = Panels(x{i}, y{i});
     end
     [p] = PanelsMulti(p1);
 

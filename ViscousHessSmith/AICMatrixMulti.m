@@ -20,14 +20,11 @@ for i = 1:ntot
 
             Rt = Rotation(p.panel(j).beta)';
             us = [0; 1/2];
-            % uv = [1/2; 0]; CHECK ME not necessary
             us = Rt*us;
-            % uv = Rt*uv; CHECK ME not necessary
 
         else
-
+    
             us = ConstantSource2D(1, p.panel(j), p.panel(i));
-            % uv = [us(2); -us(1)]; CHECK ME not necessary
 
         end
 
@@ -37,16 +34,13 @@ for i = 1:ntot
 
 
     %sottomatrice b_v (vortici su sorgenti) 
-
     for k = 1:nairfoils
 
         for j = ((k-1)*nterz + 1 ):k*nterz
             if (i == j)
 
                 Rt = Rotation(p.panel(j).beta)';
-                % us = [0; 1/2]; CHECK ME not necessary
                 uv = [1/2; 0];
-                % us = Rt*us; CHECK ME not necessary
                 uv = Rt*uv;
 
             else
@@ -55,7 +49,8 @@ for i = 1:ntot
                 uv = [us(2); -us(1)];
 
             end
-            AIC(i,ntot-nairfoils + k) = AIC(i,ntot- nairfoils + k) + ni*uv;
+
+            AIC(i, ntot-nairfoils + k) = AIC(i, ntot- nairfoils + k) + ni*uv;
 
         end
     end

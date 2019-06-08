@@ -11,32 +11,46 @@ function [x, y, totLength] = multiGeometry(npoint, aname, alpha, dist, crel, var
     end
 
     % preallocation of airfoil shape
-    x = zeros(2*npoint - 1, nairfoils);
-    y = zeros(2*npoint - 1, nairfoils);
+    x = cell(1,2);
+    y = cell(1,2);
+
+    orig_npoint = npoint;
 
     % get airfoil shape
     for i = 1:nairfoils
-        [x(:,i), y(:,i)] = AirfoilShape(aname(i,:), npoint);
+
+        % adjust number of points
         if i > 1
-            x(:,i) = crel(i-1) * x(:,i);
-            y(:,i) = crel(i-1) * y(:,i);
+            npoint = getNpt(orig_npoint, crel(i-1));
         end
-    end
+        
+        % get shape
+        [xcurr, ycurr] = AirfoilShape(aname(i,:), npoint);
 
-    % resize airfoils and apply angle of attack
-    for i = 2:nairfoils
+        % apply geometric transformation to rear profiles
+        if i > 1
 
-        alpha_rel = alpha(i) - alpha(1);
+            % adjust airfoil size
+            xcurr = crel(i-1) * xcurr;
+            ycurr = crel(i-1) * ycurr;
 
-        R= [cos(alpha_rel*pi/180) sin(alpha_rel*pi/180);
-            -sin(alpha_rel*pi/180) cos(alpha_rel*pi/180)];
+            % rotation
+            alpha_rel = alpha(i) - alpha(1);
+            R= [cos(alpha_rel*pi/180) sin(alpha_rel*pi/180);
+                -sin(alpha_rel*pi/180) cos(alpha_rel*pi/180)];
+            coord_mat = [xcurr, ycurr]';
+            coord_mat = R * coord_mat;
+            coord_mat = coord_mat';
 
-        coord_mat = [x(:,i), y(:,i)]';
-        coord_mat = R * coord_mat;
-        coord_mat = coord_mat';
+            % translation
+            xcurr = coord_mat(:,1) + dist(i-1,1);
+            ycurr = coord_mat(:,2) + dist(i-1,2);
 
-        x(:,i) = coord_mat(:,1) + dist(i-1,1);
-        y(:,i) = coord_mat(:,2) + dist(i-1,2);
+        end
+
+        % save
+        x{i} = xcurr;
+        y{i} = ycurr;
 
     end
 
@@ -46,12 +60,15 @@ function [x, y, totLength] = multiGeometry(npoint, aname, alpha, dist, crel, var
         hold on
         axis equal
         for i = 1:nairfoils
-            scatter(x(:,i),y(:,i), '.', 'black')
+            scatter(x{i},y{i}, '.', 'black')
         end
         hold off
     end
 
     % calculate total length (normalised on first airfoil's parameter)
-    totLength = max(x(:));
+    totLength = 0;
+    for ii = 1:length(x)
+        totLength = max(totLength, max(x{ii}));
+    end
 
 end
