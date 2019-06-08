@@ -1,5 +1,4 @@
 function StartHS()
-
 % Hess-Smith panel method for multi-airfoil case: the software allows to consider
 % single or multi airfoil case, with an indefinite number of airfoils. For
 % each airfoil, IGP parameters, the angle of attack, the leading edge
@@ -35,7 +34,7 @@ for ii = 1:AirfNumb
     end
     disp(newline)
 end
-disp(['Do you want to show nodes on the airfoil surface on the plot?'])
+disp('Do you want to show nodes on the airfoil surface on the plot?')
 showNodes = input('Please type 1 for yes, 0 for no: ');
 disp(newline)
 
