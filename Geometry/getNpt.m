@@ -2,7 +2,7 @@ function npt = getNpt(orig_npt, relChord)
 
     % settings
     min_npt = 0.2 * orig_npt;
-    fctr = 4/3;
+    fctr = 1.4;
 
     % get no points
     npt = fctr * relChord * orig_npt;

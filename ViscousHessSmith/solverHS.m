@@ -64,40 +64,35 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
     for i = 1:nairfoils % this runs backwards to avoid preallocation issues!
         [p1(i)] = Panels(x{i}, y{i});
     end
-    [p] = PanelsMulti(p1);
+    [p, metaPan] = PanelsMulti(p1);
 
     % Influence matrix
-    [AIC] = AICMatrixMulti(p, nairfoils);
+    [AIC] = AICMatrixMulti(p, metaPan, nairfoils);
 
     % Right Hand Side Vector {RHS}
-    [RHS] = RHSVectorMulti (p, alpha, 1);
+    [RHS] = RHSVectorMulti(p, alpha, 1);
 
     % Solution
     SOL = AIC\RHS;
 
     % Velocity on profile
-    [v] = VelocityMulti(p, p1, alpha, 1, SOL);
+    v = VelocityMulti(p, metaPan, nairfoils, alpha, 1, SOL);
 
     % Preallocation of coefficients
-    [np, nairfoils] = size(v);
-    Cp = zeros(np, nairfoils);
+    Cp = cell(1, nairfoils);
     maxdCp = zeros(nairfoils, 2);
     Cl = zeros(nairfoils,1);
     Cd = zeros(nairfoils,1);
 
     % Calculation of coefficients
     for i = 1:nairfoils
-        [Cp(:,i)] = PressureCoeff(v(:,i), 1);
-        if i == 1
-            [Cl(i), Cd(i)] = Loads(p1(i), Cp(:,i), alpha(i));
-        else
-            [Cl(i), Cd(i)] = Loads(p1(i), Cp(:,i), alpha(i));
-        end
+        Cp{i} = PressureCoeff(v{i}, 1);
+        [Cl(i), Cd(i)] = Loads(p1(i), Cp{i}, alpha(i));
         % FIXME: fix calculation of maxdCp after reading Valarezo-Chin
-        ncp = floor(size(Cp,1)/2);
-        maxdCp(i, 1) = max(Cp(1:ncp, i)) - min(Cp(1:ncp, i));
-        ncp = ncp + 1;
-        maxdCp(i, 2) = max(Cp(ncp:end, i)) - min(Cp(ncp:end, i));
+        % ncp = floor(size(Cp,1)/2);
+        % maxdCp(i, 1) = max(Cp(1:ncp, i)) - min(Cp(1:ncp, i));
+        % ncp = ncp + 1;
+        % maxdCp(i, 2) = max(Cp(ncp:end, i)) - min(Cp(ncp:end, i));
     end
 
 

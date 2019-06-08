@@ -1,4 +1,4 @@
-function [p] = PanelsMulti(p1)
+function [p, metaPan] = PanelsMulti(p1)
 
 
 nairfoil = length(p1);
@@ -6,23 +6,34 @@ nairfoil = length(p1);
 p = struct;
 
 % get no pts for each airfoil
-nptzsa = zeros(1,nairfoil); 
+nptz = zeros(1,nairfoil); 
 for ii = 1:nairfoil
-    nptzsa(ii) = length(p1(ii).panel);
+    nptz(ii) = length(p1(ii).panel);
 end
 
-ntot = sum(nptzsa);
+% get number of TRUE panels (excludes Kutta panels) for each airfoil
+npan = nptz - 1;
+
+% zero index for panels of each airfoil
+idx_zeroPan = zeros(1, nairfoil);
+for ii = 2:nairfoil
+    idx_zeroPan(ii) = sum(npan(1:(ii-1)));
+end
+
+% zero index for kutta panels
+idx_zeroKutta = sum(npan);
+
+% ntot = sum(nptzsa);
 
 % nterz = (ntot-nairfoil)/nairfoil;
 
                
 for k = 1:nairfoil
 
-    npoints = nptzsa(ii);
-    nterz = npoints - 1;
+    % nterz = npoints - 1;
 
-    for j = 1:(npoints-1)
-        i = ((k-1)*nterz + j);
+    for j = 1:npan(k)
+        i = idx_zeroPan(k) + j;
         p.panel(i).P1.x  = p1(k).panel(j).P1.x;
         p.panel(i).P2.x  = p1(k).panel(j).P2.x;
         p.panel(i).P1.y  =  p1(k).panel(j).P1.y;
@@ -34,7 +45,8 @@ for k = 1:nairfoil
         p.panel(i).R  = p1(k).panel(j).R ;
     end
 
-    i = ((nairfoil-1)*nterz + npoints -1) + k;
+    i = idx_zeroKutta + k;
+    npoints = nptz(ii);
     p.panel(i).P1.x  = p1(k).panel(npoints).P1.x;
     p.panel(i).P2.x  = p1(k).panel(npoints).P2.x;
     p.panel(i).P1.y  =  p1(k).panel(npoints).P1.y;
@@ -46,6 +58,9 @@ for k = 1:nairfoil
     p.panel(i).R  = p1(k).panel(npoints).R ;
 end
 
+metaPan = struct;
+metaPan.npan = npan;
+metaPan.idx_zeroPan = idx_zeroPan;
 
     
 return

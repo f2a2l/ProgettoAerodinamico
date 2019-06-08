@@ -1,9 +1,10 @@
-function[vaux] = VelocityMulti (p, p1, alpha, U, SOL)
+function [vaux] = VelocityMulti (p, metaPan, nairfoils, alpha, U, SOL)
 
+% extract input
+npan = metaPan.npan;
+idx_zeroPan = metaPan.idx_zeroPan;
 
 ntot = length(p.panel);
-nairfoils = length(p1);
-nterz = (ntot - nairfoils)/nairfoils;
 
 alpha1 = alpha(1); % il sist. di riferimento � solidale al primo profilo
 uInf1 = U*[cos(deg2rad(alpha1)); sin(deg2rad(alpha1))];
@@ -41,7 +42,7 @@ for i = 1:ntot-nairfoils
     for k = 1:nairfoils
 
 
-        for j =  ((k-1)*nterz + 1 ):k*nterz
+        for j =  (1:npan(k)) + idx_zeroPan(k)
 
             if (i == j)
 
@@ -51,7 +52,6 @@ for i = 1:ntot-nairfoils
             else
 
                 uv = ConstantVortex2D (SOL(end-nairfoils+k), p.panel(j), p.panel(i));
-
 
             end
 
@@ -69,17 +69,11 @@ for i = 1:ntot-nairfoils
 end
 
 
-vaux = zeros(nterz,nairfoils);
+vaux = cell(1,nairfoils);
 
 for k = 1:nairfoils
-    j = 0;
-    for  i = ((k-1)*nterz + 1):k*nterz
-        j = j + 1;
-        vaux(j,k) = v(i);
-    end
+    vaux{k} = v((1:npan(k)) + idx_zeroPan(k));
 end
-
-
 
 
 

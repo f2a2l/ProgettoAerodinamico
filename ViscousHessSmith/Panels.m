@@ -1,4 +1,4 @@
-function [p] = Panels (x, y)
+function [p] = Panels(x, y)
 %Build the data structure containing all the data related to the panels:
 %end points location, center point location, panel length, angle and 
 %rotation matrix. Adds also a wake panel.
@@ -22,14 +22,14 @@ for i = 1:n-1
     
 end
 
-[p] = WakePanel (p);
+[p] = addWakePanel (p);
 
 return
 
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 
-function [p] = WakePanel (p)
+function [p] = addWakePanel(p)
 
 n = length(p.panel);
 
