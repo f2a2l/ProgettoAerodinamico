@@ -1,5 +1,5 @@
 %function [x_transition] = solverBL(Re, x, y, ue, h_trans, varargin)
-function [x_transition, Cf, xi] = solverBL(Re, varargin)
+function [x_transition, Cf, xi] = solverBL(Re, h_trans, varargin)
 %solverBL - inspired by J. Moran's INTGRL; solves integral boundary layer equations
 %starting at a stagnation point.
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
@@ -130,13 +130,7 @@ function [x_transition, Cf, xi] = solverBL(Re, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % initialisation
-    % h = h_trans;
-
-    disp(['h at transition: ' num2str(h)])
-    if h < 1
-        warning('you probably need to set h_trans')
-    end
-
+    h = h_trans;
     yy(2) = h1_of_h(h);
     yy(1) = theta(ii - 1);
 
@@ -154,6 +148,9 @@ function [x_transition, Cf, xi] = solverBL(Re, varargin)
         % get Re and Cf
         Retheta = Re * ue(ii) * theta(ii);
         Cf(ii) = cfturb(Retheta, h);
+
+        % update counter
+        ii = ii + 1;
 
         % check separation
         if h > 2.4
@@ -346,11 +343,11 @@ function xx = x(ii)
 end
 
 function yy = y(ii)
-    yy = sin(pi*(ii-1)/100-1) *0.5;
+    yy = sin(pi*(ii-1)/100-1) *.5;
 end
 
 function ve = ue(ii)
-    ve = (1 + 0.5)*sqrt((1-x(ii)^2)/(1-(1-0.5^2)*x(ii)^2));
+    ve = (1 + .5)*sqrt((1-x(ii)^2)/(1-(1-.5^2)*x(ii)^2));
 end
 
 function xi = getXi(nx)    
