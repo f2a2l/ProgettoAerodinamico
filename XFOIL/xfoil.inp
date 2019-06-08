@@ -1,0 +1,22 @@
+naca  0012
+300
+
+50
+
+
+
+oper
+re 1e+06
+mach 0
+visc
+pacc
+
+
+alfa 2
+dump xfoil_a02.000_dump.dat
+cpwr xfoil_a02.000_cpwr.dat
+pwrt
+xfoil_pwrt.dat
+plis
+
+quit
