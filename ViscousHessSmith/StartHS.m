@@ -44,12 +44,13 @@ disp(newline)
 % -------------------------------------------------------------------------
 % Hess-Smith method (external function)
 
+tic
 if AirfNumb == 1
     [Cl, Cd, ~, ~, ~, x, y, p, p1, SOL] = solverHS(80, aname, alpha, true);
 else
-    [Cl, Cd, ~, ~, ~, x, y, p, p1, SOL] = solverHS(80, aname, alpha, dist, crel, true);
+    [Cl, Cd, ~, ~, ~, x, y, p, p1, SOL, metaPan] = solverHS(80, aname, alpha, dist, crel, true);
 end
-
+toc
 
 
 % -------------------------------------------------------------------------
@@ -57,9 +58,9 @@ end
 
 
 if AirfNumb == 1
-    [uField,vField, Xgrid, Ygrid] = velocityField(p1, p1, alpha, 1, SOL, x, y);
+    [uField,vField, Xgrid, Ygrid] = velocityField(p1, AirfNumb, alpha, 1, SOL, x, y);
 else
-    [uField,vField, Xgrid, Ygrid] = velocityField(p, p1, alpha, 1, SOL, x, y);
+    [uField,vField, Xgrid, Ygrid] = velocityField(p, metaPan, AirfNumb, alpha, 1, SOL, x, y);
 end
 
 starty = (-1.5:0.025:1.5)';
@@ -75,9 +76,9 @@ strCd = [];
 
 for j = 1:AirfNumb
 
-    plot(x(:,j),y(:,j),'-','color',rand(1,3),'linewidth',2)
+    plot(x{j},y{j},'-','color',rand(1,3),'linewidth',2)
     if showNodes
-        scatter(x(:,j),y(:,j), '.', 'black')
+        scatter(x{j},y{j},'.','black')
     end
     axis equal
     

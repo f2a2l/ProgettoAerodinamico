@@ -1,4 +1,4 @@
-function [Cl, Cd, xmax, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(npoint, aname, alpha, varargin)
+function [Cl, Cd, xmax, Cp, maxdCp, x, y, p, p1, SOL, metaPan] = solverHS(npoint, aname, alpha, varargin)
 % Usage:
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha)
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, dist, crel)
@@ -9,6 +9,7 @@ function [Cl, Cd, xmax, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(npoint, aname, 
 % TODO: input check => mi conviene davvero farlo? 
 % magari lo faccio e poi lo commento prima di inserirlo in ciclo di ottimizzatore
 
+metaPan = 0;
 
 if length(alpha) == 1 && isempty(varargin)
 

@@ -46,7 +46,7 @@ for k = 1:nairfoil
     end
 
     i = idx_zeroKutta + k;
-    npoints = nptz(ii);
+    npoints = nptz(k);
     p.panel(i).P1.x  = p1(k).panel(npoints).P1.x;
     p.panel(i).P2.x  = p1(k).panel(npoints).P2.x;
     p.panel(i).P1.y  =  p1(k).panel(npoints).P1.y;
