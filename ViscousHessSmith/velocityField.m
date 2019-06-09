@@ -1,8 +1,16 @@
-function [u,v, Xgrid, Ygrid] = velocityField(p, metaPan, nairfoils, alpha, U, SOL, xa ,ya)
+function [u,v, Xgrid, Ygrid] = velocityField(p, nairfoils, alpha, U, SOL, xa ,ya, varargin)
 
     % extract input
-    npan = metaPan.npan;
-    idx_zeroPan = metaPan.idx_zeroPan;
+    if nairfoils > 1 && length(varargin) == 1
+        metaPan = varargin{1};
+        npan = metaPan.npan;
+        idx_zeroPan = metaPan.idx_zeroPan;
+    elseif nairfoils == 1 && isempty(varargin)
+        npan = length(p.panel) - 1;
+        idx_zeroPan = 0;
+    else
+        error('too many inputs.')
+    end
 
     ntot = length(p.panel);
 

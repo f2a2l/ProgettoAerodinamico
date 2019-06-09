@@ -57,7 +57,7 @@ toc
 
 
 if AirfNumb == 1
-    [uField,vField, Xgrid, Ygrid] = velocityField(p1, AirfNumb, alpha, 1, SOL, x, y);
+    [uField,vField, Xgrid, Ygrid] = velocityField(p, AirfNumb, alpha, 1, SOL, x, y);
 else
     [uField,vField, Xgrid, Ygrid] = velocityField(p, metaPan, AirfNumb, alpha, 1, SOL, x, y);
 end

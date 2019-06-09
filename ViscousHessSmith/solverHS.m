@@ -1,4 +1,4 @@
-function [Cl, Cd, xmax, Cp, maxdCp, x, y, p, p1, SOL, metaPan] = solverHS(npoint, aname, alpha, varargin)
+function [Cl, Cd, xmax, ymax, Cp, maxdCp, x, y, p, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha, varargin)
 % Usage:
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha)
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, dist, crel)
@@ -13,25 +13,28 @@ metaPan = 0;
 
 if length(alpha) == 1 && isempty(varargin)
 
+    nairfoils = 1;
+    xmax = 1;
+    ymax = 0;
+
     aname1 = aname(1, :);
     alpha1 = alpha;
 
     % Airfoil discretization and plotting
     [x, y] = AirfoilShape(aname1, npoint);
-    [p1] = Panels(x, y);
-    p = [];
+    [p] = Panels(x, y);
 
     % Aerodynamic Influence Coefficients Matrix [AIC]
-    [AIC] = AICMatrix (p1);
+    [AIC] = AICMatrix (p);
 
     % Right Hand Side Vector {RHS}
-    [RHS] = RHSVector(p1, alpha1, 1);
+    [RHS] = RHSVector(p, alpha1, 1);
 
     % System solution
     SOL = AIC\RHS;
 
     % Velocity
-    [v] = Velocity(p1, alpha1, 1, SOL); % need this for Cp
+    [v] = Velocity(p, alpha1, 1, SOL); % need this for Cp
 
     % Pressure - FIXME: fix calculation of maxdCp after reading Valarezo-Chin
     maxdCp = zeros(1,2);
@@ -44,9 +47,9 @@ if length(alpha) == 1 && isempty(varargin)
 
 
     % Aerodynamic coefficients
-    [Cl, Cd] = Loads(p1, Cp, alpha1); % omitted arguments: Cm, CmLE
+    [Cl, Cd] = Loads(p, Cp, alpha1); % omitted arguments: Cm, CmLE
 
-
+    x = {x}; y = {y};
 
 
 elseif (~isempty(varargin)) && length(alpha) >= 2
@@ -59,7 +62,7 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
     crel = varargin{2};
 
     % get multi geometry
-    [x,y, xmax] = multiGeometry(npoint, aname, alpha, dist, crel);
+    [x,y, xmax, ymax] = multiGeometry(npoint, aname, alpha, dist, crel);
 
     % panels
     for i = 1:nairfoils % this runs backwards to avoid preallocation issues!

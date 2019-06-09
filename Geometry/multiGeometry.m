@@ -1,4 +1,4 @@
-function [x, y, totLength] = multiGeometry(npoint, aname, alpha, dist, crel, varargin)
+function [x, y, totLength, yTotLength] = multiGeometry(npoint, aname, alpha, dist, crel, varargin)
 
     nairfoils = length(alpha);
     
@@ -69,6 +69,13 @@ function [x, y, totLength] = multiGeometry(npoint, aname, alpha, dist, crel, var
     totLength = 0;
     for ii = 1:length(x)
         totLength = max(totLength, max(x{ii}));
+    end
+    for ii = 1:length(x)
+        a  = x{ii};
+        idx = find(a == totLength, 1);
+        if ~isempty(idx)
+            yTotLength = a(idx);
+        end
     end
 
 end
