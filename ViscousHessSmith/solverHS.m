@@ -1,4 +1,4 @@
-function [Cl, Cd, xmax, ymax, Cp, maxdCp, x, y, p, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha, varargin)
+function [Cl, Cd, xmax, ymax, Cp, v, maxdCp, x, y, p, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha, varargin)
 % Usage:
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha)
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, dist, crel)
@@ -49,7 +49,9 @@ if length(alpha) == 1 && isempty(varargin)
     % Aerodynamic coefficients
     [Cl, Cd] = Loads(p, Cp, alpha1); % omitted arguments: Cm, CmLE
 
+    % Stuff to achieve uniformity with multiple airfoil case
     x = {x}; y = {y};
+    Cp = {Cp}; v = {v};
 
 
 elseif (~isempty(varargin)) && length(alpha) >= 2
