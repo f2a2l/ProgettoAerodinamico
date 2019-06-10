@@ -52,6 +52,10 @@ classdef solverVHS
             else
                 error('wrong input; please check documentation.')
             end
+
+            for k = nairfoils
+                v{k} = abs(v{k});
+            end
                         
             obj.nArfls = nairfoils;
             obj.alpha = alpha;
@@ -238,8 +242,10 @@ classdef solverVHS
                 disp(['Bottom transition at x = ' num2str(x_transitionB)])
 
                 if isempty(warnOutB) && isempty(warnOutT)
+                    xb(1) = [];
+                    CfB(1) = [];
                     CfB = flip(CfB);
-                    obj.Cf{k} = [CfB CfT];
+                    Cf{k} = [CfB CfT];
 
                     % plotting
                     figName = ['Cf - airfoil ' int2str(k)];

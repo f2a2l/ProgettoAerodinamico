@@ -99,9 +99,11 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
             return
         end
 
-        % integration of bl
+        % integration of bl: trapezoidal rule
         dth2ve6 = .225*(ue(ii)^5 + ue(ii-1)^5) * (xi(ii) - xi(ii-1))/Re;
-        theta(ii) = sqrt(((theta(ii-1)*theta(ii-1))*(ue(ii-1)^6) + dth2ve6) / (ue(ii)^6));
+        theta(ii) = sqrt(((theta(ii-1)^2)*(ue(ii-1)^6) + dth2ve6) / (ue(ii)^6));
+
+        % correction if on second cell
         if ii == 2
             theta(2) = theta(1);
         end
@@ -234,7 +236,7 @@ end
 function [l,h] = thwaites(lambda)
     
     if lambda < 0
-        l = .22 + 1.402*lambda + .018*lambda/(.107 + lambda);
+        l = .22 + 1.402*lambda - .018*lambda/(.107 + lambda);
         h = 2.088 + .0731/(.14 + lambda);
     else
         l = .22 + lambda*(1.57 - 1.8*lambda);
