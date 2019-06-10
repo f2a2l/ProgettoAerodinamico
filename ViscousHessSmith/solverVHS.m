@@ -30,10 +30,14 @@ classdef solverVHS
         SOL
 
         stagnIdx
+        bl
 
     end
     
     methods
+
+
+
         function obj = solverVHS(npoint, aname, alpha, varargin)
             %solverVHS Constructor: calls inviscid solver for the specified
             %geometry and saves data. Keep in mind that external viscous
@@ -93,6 +97,7 @@ classdef solverVHS
             obj.ypanc = ypanc;
 
             % preprocess BL info
+            bldata = cell(nairfoils, 2);
             for k = nairfoils:-1:1
                 cptemp = Cp{k};
                 if k == 1
@@ -107,14 +112,47 @@ classdef solverVHS
                 [~, idx] = max(cptemp);
                 obj.stagnIdx(k) = idx;
 
-                % FIXME: debug - DELETE ME AFTER YOU SEE THIS WORKS (after convergence analysis)
-                obj.Cp{k} = cptemp;
+                u = v{k};
+                xp = xpanc{k};
+                yp = ypanc{k};
 
-                % TODO: finisci
+                vbot = u(1:idx);
+                xbot = xp(1:idx);
+                ybot = yp(1:idx);
+                % pbot = cptemp(1:idx); % DEBUG
+                vbot = flip(vbot);
+                xbot = flip(xbot);
+                ybot = flip(ybot);
+                % pbot = flip(pbot); % DEBUG
+
+                vtop = u(idx:end);
+                xtop = xp(idx:end);
+                ytop = yp(idx:end);
+                % ptop = cptemp(idx:end); % DEBUG
+                
+                % DEBUG
+                % figure
+                % plot(xtop, ptop);
+                % figure
+                % plot(xbot, pbot);
+                % figure
+                % hold on
+                % plot(xtop,ytop)
+                % plot(xbot, ybot)
+                % legend({'top' 'bottom'})
+                % axis equal
+                % xtop
+                % ytop
+                % xbot
+
+                bldata{k,1} = [xtop'; ytop'; vtop'];
+                bldata{k,2} = [xbot'; ybot'; vbot'];
                 
             end
 
-            toc
+            obj.bl = bldata;
+
+            disp(['Time elapsed for BL preprocessing: ' num2str(toc) ' seconds.'])
 
         end
 
@@ -179,7 +217,49 @@ classdef solverVHS
         end
 
 
+        function getBL(obj, Re, ht)
 
+            for k=1:obj.nArfls
+
+                % top
+                blt = obj.bl{k,1};
+                xt = blt(1,:);
+                yt = blt(2,:);
+                ut = blt(3,:);
+                [warnOutT, x_transitionT, CfT] = solverBL(Re, xt, yt, ut, ht, 0, false);
+                disp(['Top transition at x = ' num2str(x_transitionT)])
+
+                % bottom
+                blb = obj.bl{k,2};
+                xb = blb(1,:);
+                yb = blb(2,:);
+                ub = blb(3,:);
+                [warnOutB, x_transitionB, CfB] = solverBL(Re, xb, yb, ub, ht, 0, false);
+                disp(['Bottom transition at x = ' num2str(x_transitionB)])
+
+                if isempty(warnOutB) && isempty(warnOutT)
+                    CfB = flip(CfB);
+                    obj.Cf{k} = [CfB CfT];
+
+                    % plotting
+                    figName = ['Cf - airfoil ' int2str(k)];
+                    figure('Name', figName)
+                    hold on
+                    grid on
+                    plot(xb, CfB)
+                    plot(xt, CfT)
+                else
+                    for ii = 1:length(warnOutT)
+                        disp(warnOutT{ii})
+                    end
+                    for ii = 1:length(warnOutB)
+                        disp(warnOutB{ii})
+                    end
+                end
+            
+            end
+
+        end
 
     end
 end

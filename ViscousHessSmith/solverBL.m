@@ -1,5 +1,4 @@
-%function [x_transition] = solverBL(Re, x, y, ue, h_trans, varargin)
-function [x_transition, Cf, xi] = solverBL(Re, h_trans, varargin)
+function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
 %solverBL - inspired by J. Moran's INTGRL; solves integral boundary layer equations
 %starting at a stagnation point.
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
@@ -9,18 +8,18 @@ function [x_transition, Cf, xi] = solverBL(Re, h_trans, varargin)
 
     %% input check
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % if ~isscalar(Re)
-    %     error('wrong input; Re must be a scalar number.')
-    % end
-    % if ~isvector(x) || ~isvector(y) || ~isvector(ue)
-    %     error('wrong input; either x, y or ue is not a vector.')
-    % end
-    % if length(x) ~= length(y)
-    %     error('wrong input; x and y have different lengths.')
-    % end
-    % if length(x) ~= length(y)
-    %     error('wrong input; ue does not match mesh dimension.')
-    % end
+    if ~isscalar(Re)
+        error('wrong input; Re must be a scalar number.')
+    end
+    if ~isvector(x) || ~isvector(y) || ~isvector(ue)
+        error('wrong input; either x, y or ue is not a vector.')
+    end
+    if length(x) ~= length(y)
+        error('wrong input; x and y have different lengths.')
+    end
+    if length(x) ~= length(y)
+        error('wrong input; ue does not match mesh dimension.')
+    end
 
 
 
@@ -28,7 +27,7 @@ function [x_transition, Cf, xi] = solverBL(Re, h_trans, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % possibly fixed transition
-    if isempty(varargin)
+    if isempty(varargin) || varargin{1} == 0
         fixedTrans = false;
     else
         fixedTrans = true;
@@ -44,9 +43,7 @@ function [x_transition, Cf, xi] = solverBL(Re, h_trans, varargin)
 
     %% define parameters
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % nx = length(x); FIXME: debug
-    nx = 100;
-
+    nx = length(x);
 
 
     %% initialisation
@@ -54,10 +51,8 @@ function [x_transition, Cf, xi] = solverBL(Re, h_trans, varargin)
     theta = zeros(1, nx);
     Cf = theta;
     warnOut = {};
-    % xi = getSwiseCoord(x, y); % get streamwise coordinate
-    xi = getXi(nx); % FIXME: debug
-    % ugrad = gradVel(ue, xi); % get velocity gradient
-    ugrad = getUgrad(xi); %FIXME: debug
+    xi = getSwiseCoord(x, y); % get streamwise coordinate
+    ugrad = gradVel(ue, xi); % get velocity gradient
 
 
 
@@ -69,6 +64,7 @@ function [x_transition, Cf, xi] = solverBL(Re, h_trans, varargin)
     ii = 1; % counter for panels
     Retheta = 0;
     Retheta_max = 1;
+    x_transition = x(end);
 
     while Retheta < Retheta_max
 
@@ -139,7 +135,7 @@ function [x_transition, Cf, xi] = solverBL(Re, h_trans, varargin)
 
         % get dx and perform integration step
         dx = xi(ii) - xi(ii-1);
-        yy = runge2(ii-1, ii, dx, yy, 2, ugrad, Re);
+        yy = runge2(ii-1, ii, dx, yy, 2, ue, ugrad, Re);
 
         % unpack integration output
         theta(ii) = yy(1);
@@ -290,13 +286,13 @@ end
 %% turbulent integration: derivatives
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-function yp = derivs(ii, yt, ugrad, Re)
+function yp = derivs(ii, yt, ue, ugrad, Re)
 
     h1 = yt(2);
 
-    if h1 <= 3
-        error('h1 must be > 3.')
-    end
+    % if h1 <= 3
+    %     return
+    % end
 
     h = h_of_h1(h1);
     rtheta = Re * ue(ii) * yt(1);
@@ -311,7 +307,7 @@ end
 %% turbulent integration: Runge-Kutta 2
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-function yy_out = runge2(i0, i1, dx, yy, n, ugrad, Re)
+function yy_out = runge2(i0, i1, dx, yy, n, ue, ugrad, Re)
 
     intvls = i1 - i0;
     
@@ -323,65 +319,17 @@ function yy_out = runge2(i0, i1, dx, yy, n, ugrad, Re)
         for jj = 1:n
             yt(jj) = yy(jj);
         end
-        yp = derivs(i0+ii-1, yt, ugrad, Re);
+        yp = derivs(i0+ii-1, yt, ue, ugrad, Re);
         for jj = 1:n 
             yt(jj) = yy(jj) + dx * yp(jj);
-            ys(jj) = yy(jj) + .5*dx*yp(jj); 
+            ys(jj) = yy(jj) + .5*dx*yp(jj);
         end
-        yp = derivs(i0+1, yt, ugrad, Re);
+        if yt(2) > 3
+            yp = derivs(i0+1, yt, ue, ugrad, Re);
+        end
         for jj = 1:n
             yy_out(jj) = ys(jj) + .5*dx*yp(jj);
         end
-    end
-
-end
-
-
-
-function xx = x(ii)
-    xx = -cos(pi*(ii-1)/(100-1));
-end
-
-function yy = y(ii)
-    yy = sin(pi*(ii-1)/100-1) *.5;
-end
-
-function ve = ue(ii)
-    ve = (1 + .5)*sqrt((1-x(ii)^2)/(1-(1-.5^2)*x(ii)^2));
-end
-
-function xi = getXi(nx)    
-    xi = zeros(1, nx); % streamwise coordinate
-
-    for ii = 2:nx
-        dx = x(ii) - x(ii-1);
-        dy = y(ii) - y(ii-1);
-        xi(ii) = xi(ii-1) + sqrt(dx*dx + dy*dy);
-    end
-end
-
-function ugrad = getUgrad(xi)
-
-    nx = length(xi);
-    ugrad = zeros(1, nx); % external velocity gradient
-
-    v1 = ue(3);
-    x1 = xi(3);
-    v2 = ue(1);
-    x2 = xi(1);
-    xi(nx+1) = xi(nx-2);
-    for ii = 1:nx
-        v3 = v1;
-        x3 = x1;
-        v1 = v2;
-        x1 = x2;
-        v2 = ue(nx-2);
-        if ii < nx
-            v2 = ue(ii+1);
-        end
-        x2 = xi(ii+1);
-        fact = (x3 - x1)/(x2 - x1);
-        ugrad(ii) = ((v2 - v1) * fact - (v3 - v1)/fact)/(x3-x2);
     end
 
 end
