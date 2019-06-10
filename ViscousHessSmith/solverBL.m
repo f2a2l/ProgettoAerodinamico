@@ -4,7 +4,10 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
 %for turbulent flow.
 
-    % TODO: best fit for h_trans; remember it must be between 1.3 and 1.4
+    % TODO: best fit for h_trans; remember it must be between 1.3 and 1.4 (necessarily >=1!)
+    if h_trans < 1
+        error('h1 cannot be < 1.')
+    end
 
     %% input check
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -72,7 +75,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
         lambda = theta(ii)*theta(ii) * ugrad(ii) * Re;
 
         % check laminar separation
-        if lambda < -0.842
+        if lambda < -.0842
             if showWarn
                 warning(['laminar separation at x = ' num2str(x(ii))]);
             end
@@ -130,6 +133,8 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
     yy(2) = h1_of_h(h);
     yy(1) = theta(ii - 1);
 
+    % legend: yy = [theta, h1]
+
     % keep on integrating
     while ii <= nx
 
@@ -145,9 +150,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
         Retheta = Re * ue(ii) * theta(ii);
         Cf(ii) = cfturb(Retheta, h);
 
-        % update counter
-        ii = ii + 1;
-
         % check separation
         if h > 2.4
             if showWarn
@@ -157,6 +159,9 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
             warnOut{end+1} = x(ii);
             return
         end
+
+        % update counter
+        ii = ii + 1;
 
     end
 
@@ -182,7 +187,7 @@ function xi = getSwiseCoord(x, y)
     
     xi = zeros(1, nx); % streamwise coordinate
 
-    for ii = 2:length(x)
+    for ii = 2:nx
         dx = x(ii) - x(ii-1);
         dy = y(ii) - y(ii-1);
         xi(ii) = xi(ii-1) + sqrt(dx*dx + dy*dy);
@@ -265,7 +270,7 @@ function h = h_of_h1(h1)
     elseif h1 < 5.3
         h = .6778 + 1.1536*(h1 - 3.3)^(-.326);
     else
-        h = 1.1 + .86*(h1 - 3.3)^(.777);
+        h = 1.1 + .86*(h1 - 3.3)^(-.777);
     end
 
 end
@@ -286,19 +291,21 @@ end
 %% turbulent integration: derivatives
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-function yp = derivs(ii, yt, ue, ugrad, Re)
+function ypr = derivs(ii, yt, yp, ue, ugrad, Re)
 
     h1 = yt(2);
 
-    % if h1 <= 3
-    %     return
-    % end
+    if h1 <= 3
+        ypr = yp;
+        warning('h1 < 3; function is returning default value')
+        return
+    end
 
     h = h_of_h1(h1);
     rtheta = Re * ue(ii) * yt(1);
 
-    yp(1) = -(h+2)*yt(1)*ugrad(ii)/ue(ii) + .5*cfturb(rtheta,h);
-    yp(2) = -h1*(ugrad(ii)/ue(ii) + yp(1)/yt(1)) + .0306*(h1-3)^(-.6169)/yt(1);
+    ypr(1) = -(h+2)*yt(1)*ugrad(ii)/ue(ii) + .5*cfturb(rtheta,h);
+    ypr(2) = -h1*(ugrad(ii)/ue(ii) + yp(1)/yt(1)) + .0306*(h1-3)^(-.6169)/yt(1);
 
 end
 
@@ -310,23 +317,23 @@ end
 function yy_out = runge2(i0, i1, dx, yy, n, ue, ugrad, Re)
 
     intvls = i1 - i0;
+    yp = [0,0];
     
     if intvls < 1
-        error('invalid i1 and i0.')
+        yy_out = yy;
+        return
     end
 
     for ii = 1:intvls
         for jj = 1:n
             yt(jj) = yy(jj);
         end
-        yp = derivs(i0+ii-1, yt, ue, ugrad, Re);
+        yp = derivs(i0+ii-1, yt, yp, ue, ugrad, Re);
         for jj = 1:n 
             yt(jj) = yy(jj) + dx * yp(jj);
             ys(jj) = yy(jj) + .5*dx*yp(jj);
         end
-        if yt(2) > 3
-            yp = derivs(i0+1, yt, ue, ugrad, Re);
-        end
+        yp = derivs(i0+1, yt, yp, ue, ugrad, Re);
         for jj = 1:n
             yy_out(jj) = ys(jj) + .5*dx*yp(jj);
         end
