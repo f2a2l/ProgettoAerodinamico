@@ -21,8 +21,12 @@ optiPAR; %as output: lb and ub. Here it is possibile to define boundaries for op
 fun = @lapTime_objFun;
 nvars = 21;
 
+%Max simulation time
+days = 1;
+MaxTime = 60 * 60 * 24 * days;
+
 options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter','FunctionTolerance',1e-6,...
                         'MaxIterations',200*nvars,'MaxTime',60*60*24,'PlotFcn','pswplotbestf',...
-                        'UseParallel',1);
-                    
-[optimalSolution] = particleswarm(fun,nvars,lb,ub);
+                        'UseParallel',true);
+                                      
+[optimalSolution,fval,exitflag,output] = particleswarm(fun,nvars,lb,ub,options);
