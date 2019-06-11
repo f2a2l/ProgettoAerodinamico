@@ -51,8 +51,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
 
     %% initialisation
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    theta = zeros(1, nx);
-    Cf = theta;
+    Cf = zeros(1, nx);
     warnOut = {};
     xi = getSwiseCoord(x, y); % get streamwise coordinate
     ugrad = gradVel(ue, xi); % get velocity gradient
@@ -62,51 +61,37 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
     %% laminar: integration
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    % initial conditions
-    theta = sqrt(.075/Re/ugrad(1));
-    hek = 1.61998;
+    % initial conditions (main variables)
+    theta = sqrt(.075/Re/ugrad(1)); % value from Moran
+    delta = 2.23641 * theta; % derived starting from Eppler's cond. on hek
+    eta = 0;
+
+    % initial conditions (auxiliary variables)
+    % hek = 1.61998; % value from Eppler
+    h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
+    Retheta = Re * ue(1) * theta;
 
     % initialisation
     ii = 1; % counter for panels
-    Retheta = Re * theta * ue(1);
-    Retheta_max = Retheta+1;
     x_transition = x(end);
     opts = optimset('Display','off'); % options for nonlinear solver
 
-    while Retheta < Retheta_max
+    while eta < 9
 
         % check laminar separation
         % if it happens, calculations switch to turbulent (as if there were a trans. bubble)
         % however, if turbulent flow separates straight away, it probably was a laminar separation
-        if hek < 1.515
-            if showWarn
-                warning(['laminar separation at x = ' num2str(x(ii))]);
-            end
-            warnOut{end+1} = 'laminar separation';
-            warnOut{end+1} = x(ii);
-            break
-        end
-
-        % calulate h
-        % this must be done after checking transition -  so that if it goes after bounds,
-        % transition check avoids calculation of h
-        if ii = 1
-            h = 2.23641;
-        else
-            h = h_of_hek(hek, h);
-        end
+        %if hek < 1.515
+        %    if showWarn
+        %        warning(['laminar separation at x = ' num2str(x(ii))]);
+        %    end
+        %    warnOut{end+1} = 'laminar separation';
+        %    warnOut{end+1} = x(ii);
+        %    break
+        %end
 
         % calculate skin friction factor
-        Cf(ii) = cflam();
-
-        % integration of bl: forward/backward Euler
-        guess_y = [theta, hek];
-        dxi = xi(ii+1) - xi(ii);
-        f = @(a) stepFBE(a, Re, theta, hek, dxi, h, ue(ii), ue(ii+1), ugrad(ii));
-        [y, ~, exitFlag] = fsolve(f, guess_y, opts);
-        if exitFlag ~= 1
-            error(['fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
-        end
+        Cf(ii) = cflam(Retheta, h);
 
         % go on to next panel, check if such panel exists
         ii = ii + 1;
@@ -114,24 +99,34 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
             return
         end
 
-        % update variables
-        theta = y(1);
-        hek = y(2);
+        % integration of bl: forward/backward Euler
+        guess_y = [theta, delta, eta];
+        dxi = xi(ii) - xi(ii-1);
+        f = @(a) stepBackEuler(a, Re, theta, delta, eta, dxi, ue(ii), ugrad(ii));
+        [y, ~, exitFlag] = fsolve(f, guess_y, opts);
+        if exitFlag > 1
+            warning(['at iteration ' int2str(ii) ', fsolve did not properly converge; exit flag ' int2str(exitFlag) '.'])
+        elseif exitFlag < 1
+            warning(['at iteration ' int2str(ii) ', fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
+        end
 
         % correction if on second cell
-        if ii == 2
-            theta(2) = theta(1);
-        end
+        % if ii == 2
+        %    theta(2) = theta(1);
+        % end
+
+        % update variables
+        theta = y(1);
+        delta = y(2);
+        eta = y(3);
+        h = delta/theta;
+        Retheta = Re * theta * ue(ii);
 
         % check transition
         if fixedTrans
             if x(ii) > xtrans
                 break
             end
-        else
-            Rex = Re * xi(ii) * ue(ii);
-            Retheta = Re * theta(ii) * ue(ii);
-            Retheta_max = 1.174 * (1 + 22400/Rex) * Rex^.46;
         end
 
     end
@@ -148,7 +143,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
     % initialisation
     h = h_trans;
     yy(2) = h1_of_h(h);
-    yy(1) = theta(ii - 1);
+    yy(1) = theta;
 
     % legend: yy = [theta, h1]
 
@@ -250,13 +245,13 @@ end
 
 function hs = hek_of_h(h)
     if h < 4
-        hs = 1.515 + 0.076 * (4-h).^2/h;
+        hs = 1.515 + 0.076*((4-h)^2)/h;
     else
-        hs = 1.515 + 0.04*(h-4).^2/h;
+        hs = 1.515 + 0.040*((h-4)^2)/h;
     end
 end
 
-function h = h_of_hek(hek, guess_h)
+function h = h_of_hek(hek, guess_h) % possibly deprecated
     if hek < 1.515
         error('too low value of hek; laminar flow should be separated (possibly originating a transition bubble).')
     elseif hek < 1.51509 % give it a little error margin
@@ -270,7 +265,7 @@ function h = h_of_hek(hek, guess_h)
     end
 end
 
-function h = h_of_hek_eppler(hek)
+function h = h_of_hek_eppler(hek) % possibly deprecated
 %h_of_hek - empirical formula from Eppler.
 % This one provides a good fit of the previous one (hek_of_h) for 1.8574 < h < 4 (1.515 < hek < 1.7515).
 % However, the inverse of hek(h) is NOT A FUNCTION - so this is basically just one branch of the inverse.
@@ -286,33 +281,34 @@ end
 
 function cf = cflam(Ret, h)
     if h < 7.4
-        lhs = -0.067 + 0.01977*(7.4-h).^2/(h-1);
+        lhs = -0.067 + 0.01977*((7.4-h)^2)/(h-1);
     else
-        lhs = -0.067 + 0.022(1 - 1.4/(h-6)).^2;
+        lhs = -0.067 + 0.022*(1 - 1.4/(h-6))^2;
     end
     cf = 2 * lhs /Ret;
 end
 
 function cds = cdiss(Ret, hek, h)
     if h < 4
-        lhs = 0.207 + 0.00205 * (4 - h).^5.5;
+        lhs = 0.207 + 0.00205 * (4-h)^(5.5);
     else
-        lhs = 0.207 - 0.003 * (h-4).^2 / (1 + 0.02*(h-4).^2);
+        lhs = 0.207 - 0.003 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
     end
     cds = lhs * hek /2 /Ret;
 end
 
 function hd = hdens(h)
-    hd = 0.064/(h-0.8) + 0.251;
+    % hd = 0.064/(h-0.8) + 0.251;
+    hd = 0; % since Me = 0
 end
 
 function [l, m] = lm(h)
     l = (6.54*h - 14.07)/h^2;
-    m = (0.058*(h-4)^2/(h-1) - 0.068)/l;
+    m = (0.058*((h-4)^2)/(h-1) - 0.068)/l;
 end
 
 function diff = detadre(h)
-    diff = 0.01*sqrt((2.4*h - 3.7 + 2.5*tanh(1.5*h-4.65))^2+0.25);
+    diff = 0.01*sqrt(((2.4*h - 3.7 + 2.5*tanh(1.5*h-4.65))^2)+0.25);
 end
 
 function y = stepBackEuler(x, Re, theta, delta, eta, dxi, n_ue, n_ugrad)
