@@ -62,21 +62,25 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % initial conditions (main variables)
-    theta = sqrt(.075/Re/ugrad(1)); % value from Moran
+    %theta = sqrt(.075/Re/ugrad(1)); % value from Moran
+    theta = 0.29004 * sqrt(xi(2)/Re /ue(2));
     delta = 2.23641 * theta; % derived starting from Eppler's cond. on hek
+    % delta = 1.7507/sqrt(Re * ugrad(1));
     eta = 0;
 
     % initial conditions (auxiliary variables)
-    % hek = 1.61998; % value from Eppler
+    % hek = 1.61998; % WARNING: if you use this, set initial ii to 2 (Eppler)
     h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
-    Retheta = Re * ue(1) * theta;
+    % h = delta/theta;
+    Retheta = Re * ue(2) * theta;
+    Retmax = 1 + Retheta;
 
     % initialisation
     ii = 1; % counter for panels
     x_transition = x(end);
     opts = optimset('Display','off'); % options for nonlinear solver
 
-    while eta < 9
+    while eta < 9 && Retheta < Retmax
 
         % check laminar separation
         % if it happens, calculations switch to turbulent (as if there were a trans. bubble)
@@ -100,10 +104,11 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
         end
 
         % integration of bl: forward/backward Euler
-        guess_y = [theta, delta, eta];
+        guess_y = [theta, delta];
         dxi = xi(ii) - xi(ii-1);
-        f = @(a) stepBackEuler(a, Re, theta, delta, eta, dxi, ue(ii), ugrad(ii));
+        f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii));
         [y, ~, exitFlag] = fsolve(f, guess_y, opts);
+        eta = stepAmplInt(eta, dxi, theta, h, y(1), y(2));
         if exitFlag > 1
             warning(['at iteration ' int2str(ii) ', fsolve did not properly converge; exit flag ' int2str(exitFlag) '.'])
         elseif exitFlag < 1
@@ -118,7 +123,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
         % update variables
         theta = y(1);
         delta = y(2);
-        eta = y(3);
         h = delta/theta;
         Retheta = Re * theta * ue(ii);
 
@@ -127,6 +131,10 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
             if x(ii) > xtrans
                 break
             end
+        else
+            Rex = Re * xi(ii) * ue(ii);
+            Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
+            % Retmax = RethetaCrit(h);
         end
 
     end
@@ -211,29 +219,44 @@ end
 %% differentiate velocity
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function  ugrad = gradVel(ue, xi)
+% function  ugrad = gradVel(ue, xi)
+% 
+%     nx = length(ue);
+% 
+%     ugrad = zeros(1, nx); % external velocity gradient
+% 
+%     v1 = ue(3);
+%     x1 = xi(3);
+%     v2 = ue(1);
+%     x2 = xi(1);
+%     xi(nx+1) = xi(nx-2);
+%     for ii = 1:nx
+%         v3 = v1;
+%         x3 = x1;
+%         v1 = v2;
+%         x1 = x2;
+%         v2 = ue(nx-2);
+%         if ii < nx
+%             v2 = ue(ii+1);
+%         end
+%         x2 = xi(ii+1);
+%         fact = (x3 - x1)/(x2 - x1);
+%         ugrad(ii) = ((v2 - v1) * fact - (v3 - v1)/fact)/(x3-x2);
+%     end
+% 
+% end
 
-    nx = length(ue);
+function ugrad = gradVel(ue, xi)
 
-    ugrad = zeros(1, nx); % external velocity gradient
+    ugrad = zeros(size(ue));
 
-    v1 = ue(3);
-    x1 = xi(3);
-    v2 = ue(1);
-    x2 = xi(1);
-    xi(nx+1) = xi(nx-2);
-    for ii = 1:nx
-        v3 = v1;
-        x3 = x1;
-        v1 = v2;
-        x1 = x2;
-        v2 = ue(nx-2);
-        if ii < nx
-            v2 = ue(ii+1);
-        end
-        x2 = xi(ii+1);
-        fact = (x3 - x1)/(x2 - x1);
-        ugrad(ii) = ((v2 - v1) * fact - (v3 - v1)/fact)/(x3-x2);
+    % first and last step: forward/backward differences (I order)
+    ugrad(1) = (ue(2) - ue(1))/(xi(2)-xi(1));
+    ugrad(end) = (ue(end) - ue(end-1))/(xi(end) - xi(end-1));
+
+    % all other steps: centered differences (II order)
+    for ii = 2:(length(ue)-1)
+        ugrad(ii) = (ue(ii+1) - ue(ii-1))/(xi(ii+1) - xi(ii-1));
     end
 
 end
@@ -311,7 +334,12 @@ function diff = detadre(h)
     diff = 0.01*sqrt(((2.4*h - 3.7 + 2.5*tanh(1.5*h-4.65))^2)+0.25);
 end
 
-function y = stepBackEuler(x, Re, theta, delta, eta, dxi, n_ue, n_ugrad)
+function ret0 = RethetaCrit(h)
+    lhs = (1.415/(h-1)-0.489)*tanh(20/(h-1)-12.9) + 3.295/(h-1) + 0.44;
+    ret0 = 10^lhs;
+end
+
+function y = stepLamInt(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad)
 
     y = zeros(size(x)); % preallocation
 
@@ -320,26 +348,44 @@ function y = stepBackEuler(x, Re, theta, delta, eta, dxi, n_ue, n_ugrad)
     % unpack input
     n_theta = x(1); % theta_(n+1)
     n_delta = x(2); % delta_(n+1)
-    n_eta = x(3); % eta_(n+1)
 
-    % preprocessing
+    % preprocessing: new auxiliary variables
     n_Ret = Re * n_ue * n_theta; % Re_theta
     n_h = n_delta/n_theta; % new h = d/theta
     n_hek = hek_of_h(n_h); % new hek(h)
+
+    % preprocessing: old auxiliary variables
     h = delta/theta; % old h
     hek = hek_of_h(h); % old hek
-    d_eta = detadre(n_h);
-    [l, m] = lm(n_h);
+    Ret = Re * ue * theta;
+    
 
     % momentum thickness and energy shape parameter equations: BACKWARDS EULER
     y(1) = (n_theta - theta)/dxi ...
-            + (2+n_h)*(n_theta/n_ue)*n_ugrad - cflam(n_Ret, n_h)/2;
+            + (2+n_h)*(n_theta/n_ue)*n_ugrad/2 - cflam(n_Ret, n_h)/4 ...
+            + (2+  h)*  (theta/  ue)*  ugrad/2 - cflam(  Ret,   h)/4;
     y(2) = n_theta*(n_hek-hek)/dxi ...
             + (2*hdens(n_h) + n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h) ...
             + n_hek*cflam(n_Ret, n_h)/2;
-    y(3) = (n_eta - eta)/dxi ...
-            - d_eta * (m+1)/2 * l/n_theta;
     
+    
+end
+
+function n_eta = stepAmplInt(eta, dxi, theta, h, n_theta, n_delta)
+
+    n_h = n_delta/n_theta;
+
+    n_d_eta = detadre(n_h);
+    [n_l, n_m] = lm(n_h);
+
+    d_eta = detadre(h);
+    [l, m] = lm(h);
+
+    n_eta = eta + dxi*( ...
+                n_d_eta * (n_m+1)/4 * n_l/n_theta ...
+                + d_eta * (  m+1)/4 *   l/  theta ...
+            );
+
 end
 
 
