@@ -62,46 +62,61 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
     %% laminar: integration
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    % initialise
-    theta(1) = sqrt(.075/Re/ugrad(1));
+    % initial conditions
+    theta = sqrt(.075/Re/ugrad(1));
+    hek = 1.61998;
+
+    % initialisation
     ii = 1; % counter for panels
-    Retheta = 0;
-    Retheta_max = 1;
+    Retheta = Re * theta * ue(1);
+    Retheta_max = Retheta+1;
     x_transition = x(end);
+    opts = optimset('Display','off'); % options for nonlinear solver
 
     while Retheta < Retheta_max
 
-        % get lambda
-        lambda = theta(ii)*theta(ii) * ugrad(ii) * Re;
-
         % check laminar separation
-        if lambda < -.0842
+        % if it happens, calculations switch to turbulent (as if there were a trans. bubble)
+        % however, if turbulent flow separates straight away, it probably was a laminar separation
+        if hek < 1.515
             if showWarn
                 warning(['laminar separation at x = ' num2str(x(ii))]);
             end
             warnOut{end+1} = 'laminar separation';
             warnOut{end+1} = x(ii);
-            return
+            break
         end
 
-        % thwaites' closure
-        [l, h] = thwaites(lambda);
+        % calulate h
+        % this must be done after checking transition -  so that if it goes after bounds,
+        % transition check avoids calculation of h
+        if ii = 1
+            h = 2.23641;
+        else
+            h = h_of_hek(hek, h);
+        end
 
         % calculate skin friction factor
-        Cf(ii) = 2*l/Re/theta(ii);
-        if ii > 1
-            Cf(ii) = Cf(ii)/ue(ii);
+        Cf(ii) = cflam();
+
+        % integration of bl: forward/backward Euler
+        guess_y = [theta, hek];
+        dxi = xi(ii+1) - xi(ii);
+        f = @(a) stepFBE(a, Re, theta, hek, dxi, h, ue(ii), ue(ii+1), ugrad(ii));
+        [y, ~, exitFlag] = fsolve(f, guess_y, opts);
+        if exitFlag ~= 1
+            error(['fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
         end
 
-        % go on to next panel, check if integration is done
+        % go on to next panel, check if such panel exists
         ii = ii + 1;
         if ii > nx
             return
         end
 
-        % integration of bl: trapezoidal rule
-        dth2ve6 = .225*(ue(ii)^5 + ue(ii-1)^5) * (xi(ii) - xi(ii-1))/Re;
-        theta(ii) = sqrt(((theta(ii-1)^2)*(ue(ii-1)^6) + dth2ve6) / (ue(ii)^6));
+        % update variables
+        theta = y(1);
+        hek = y(2);
 
         % correction if on second cell
         if ii == 2
@@ -230,20 +245,107 @@ end
 
 
 
-%% laminar closure: thwaites'
+%% laminar closure: Drela and Giles
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [l,h] = thwaites(lambda)
-    
-    if lambda < 0
-        l = .22 + 1.402*lambda - .018*lambda/(.107 + lambda);
-        h = 2.088 + .0731/(.14 + lambda);
+function hs = hek_of_h(h)
+    if h < 4
+        hs = 1.515 + 0.076 * (4-h).^2/h;
     else
-        l = .22 + lambda*(1.57 - 1.8*lambda);
-        h = 2.61 - lambda*(3.75 - 5.24*lambda);
+        hs = 1.515 + 0.04*(h-4).^2/h;
     end
-
 end
+
+function h = h_of_hek(hek, guess_h)
+    if hek < 1.515
+        error('too low value of hek; laminar flow should be separated (possibly originating a transition bubble).')
+    elseif hek < 1.51509 % give it a little error margin
+        h = 4;
+    else
+        f = @(x) hek_of_h(x) - hek;
+        [h, ~, exitFlag] = fzero(f, guess_h);
+        if exitFlag ~= 1
+            error(['fzero did not converge; exit flag ' int2str(exitFlag) '.'])
+        end
+    end
+end
+
+function h = h_of_hek_eppler(hek)
+%h_of_hek - empirical formula from Eppler.
+% This one provides a good fit of the previous one (hek_of_h) for 1.8574 < h < 4 (1.515 < hek < 1.7515).
+% However, the inverse of hek(h) is NOT A FUNCTION - so this is basically just one branch of the inverse.
+% Might be useful for initial value.
+    if hek < 1.515
+        error('too low value of hek.')
+    elseif hek < 1.57258
+        h = 4.02922 - (583.60182 - 724.55916*hek + 227.1822*hek.^2) * sqrt(hek - 1.515);
+    else
+        h = 79.870845 - 89.582142*hek + 25.715786*hek.^2;
+    end
+end
+
+function cf = cflam(Ret, h)
+    if h < 7.4
+        lhs = -0.067 + 0.01977*(7.4-h).^2/(h-1);
+    else
+        lhs = -0.067 + 0.022(1 - 1.4/(h-6)).^2;
+    end
+    cf = 2 * lhs /Ret;
+end
+
+function cds = cdiss(Ret, hek, h)
+    if h < 4
+        lhs = 0.207 + 0.00205 * (4 - h).^5.5;
+    else
+        lhs = 0.207 - 0.003 * (h-4).^2 / (1 + 0.02*(h-4).^2);
+    end
+    cds = lhs * hek /2 /Ret;
+end
+
+function hd = hdens(h)
+    hd = 0.064/(h-0.8) + 0.251;
+end
+
+function [l, m] = lm(h)
+    l = (6.54*h - 14.07)/h^2;
+    m = (0.058*(h-4)^2/(h-1) - 0.068)/l;
+end
+
+function diff = detadre(h)
+    diff = 0.01*sqrt((2.4*h - 3.7 + 2.5*tanh(1.5*h-4.65))^2+0.25);
+end
+
+function y = stepBackEuler(x, Re, theta, delta, eta, dxi, n_ue, n_ugrad)
+
+    y = zeros(size(x)); % preallocation
+
+    % LEGEND: plain variables = old variables; n_variables = new variables
+
+    % unpack input
+    n_theta = x(1); % theta_(n+1)
+    n_delta = x(2); % delta_(n+1)
+    n_eta = x(3); % eta_(n+1)
+
+    % preprocessing
+    n_Ret = Re * n_ue * n_theta; % Re_theta
+    n_h = n_delta/n_theta; % new h = d/theta
+    n_hek = hek_of_h(n_h); % new hek(h)
+    h = delta/theta; % old h
+    hek = hek_of_h(h); % old hek
+    d_eta = detadre(n_h);
+    [l, m] = lm(n_h);
+
+    % momentum thickness and energy shape parameter equations: BACKWARDS EULER
+    y(1) = (n_theta - theta)/dxi ...
+            + (2+n_h)*(n_theta/n_ue)*n_ugrad - cflam(n_Ret, n_h)/2;
+    y(2) = n_theta*(n_hek-hek)/dxi ...
+            + (2*hdens(n_h) + n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h) ...
+            + n_hek*cflam(n_Ret, n_h)/2;
+    y(3) = (n_eta - eta)/dxi ...
+            - d_eta * (m+1)/2 * l/n_theta;
+    
+end
+
 
 
 
