@@ -1,4 +1,20 @@
 function [t] = lapTime_objFun(param)
+
+% LAPTIME_OBJFUN Returns the time required for the Baku City Circuit 2nd Straight
+%
+% 1) It generates 2 airfoils reading the vecotr "param" which contains
+% geometry info. #See documentation for arflPar generation and meaning.
+%
+% 2) Aerodynamic Performance is based on an inviscid preliminary estimation
+% usign Hess-Smith solver, both for DRS-OFF and DRS-ON configuration.
+%
+% 3) A viscous correction is applied --> STILL TODO
+%
+% 4) At last, 2D to 3D geometry correction is applied
+%
+% 5) The code "sector.m" assembles the wing on a dynamic vehicle modeling to
+% estimate acceleration, max speed and braking performances and returs the t.
+
 tic;   
     %% Unpacking param into Optimization Parameters
     c1_main = param(1,1);
@@ -55,7 +71,12 @@ tic;
     %% Lap Time Calculation
     [t] = sector(Cl_new, Cd_new,fig);
     
-    
+        %Try to sort out some problems. This is temporary. Find the error!
+        if ~isreal(t)
+            t = 10000;
+        end
+        
+    %Penalization for nonphysical results and other problems
     else
         t = 10000;
     end
