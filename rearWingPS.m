@@ -27,6 +27,6 @@ MaxTime = 60 * 60 * 24 * days;
 
 options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter','FunctionTolerance',1e-6,...
                         'MaxIterations',200*nvars,'MaxTime',MaxTime,'PlotFcn','pswplotbestf',...
-                        'UseParallel',true);
+                        'UseParallel',true,'UseVectorized',true);
                                       
 [optimalSolution,fval,exitflag,output] = particleswarm(fun,nvars,lb,ub,options);
