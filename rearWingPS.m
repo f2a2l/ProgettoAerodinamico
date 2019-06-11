@@ -13,6 +13,9 @@ optiPAR; %as output: lb and ub. Here it is possibile to define boundaries for op
 fun = @lapTime_objFun;
 nvars = 21;
 
+%Starts ParallelPool for Parallel Computation
+parpool;
+
 %Max simulation time
 days = 1;
 MaxTime = 60 * 60 * 24 * days;
