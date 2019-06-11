@@ -4,15 +4,7 @@ close all
 clc
 
 %% Add Paths
-currDir = pwd;
-HSfolder = strcat(currDir,'/HessSmith');
-XFfolder = strcat(currDir,'/XFOIL');
-OPTIfolder = strcat(currDir,'/OptimizationCode');
-LAPfolder = strcat(currDir,'/Lap_Performance');
-GEOMfolder = strcat(currDir,'/Geometry');
-DYNfolder = strcat(currDir,'/DynMod');
-CORRfolder = strcat(currDir,'/2dto3dcorrection');
-addpath(HSfolder,XFfolder,LAPfolder,GEOMfolder,DYNfolder,CORRfolder,OPTIfolder);
+addPaths;
 
 
 %% Optimization
@@ -25,8 +17,12 @@ nvars = 21;
 days = 1;
 MaxTime = 60 * 60 * 24 * days;
 
-options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter','FunctionTolerance',1e-6,...
-                        'MaxIterations',200*nvars,'MaxTime',MaxTime,'PlotFcn','pswplotbestf',...
-                        'UseParallel',true,'UseVectorized',false);
+options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter',...
+                       'FunctionTolerance',1e-6,'MaxIterations',200*nvars,...
+                       'MaxTime',MaxTime,'PlotFcn','pswplotbestf',...
+                       'UseParallel',true,'UseVectorized',false);
                                       
 [optimalSolution,fval,exitflag,output] = particleswarm(fun,nvars,lb,ub,options);
+
+%% Generate .dat file for CFD Meshing
+geometryCFD;
