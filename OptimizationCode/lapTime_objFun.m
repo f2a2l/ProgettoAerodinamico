@@ -42,7 +42,8 @@ tic;
     %TODO
     
     %% Check Quality of results
-    if min(min(min(Cl,Cd))) > -1 && isreal(Cl) && isreal(Cd)
+    %if min(min(min(Cl,Cd))) > -1 && isreal(Cl) && isreal(Cd)
+    if min(sum(Cd)) > 0 && isreal(Cl) && isreal(Cd)
     
     %% 2D to 3D Correction
     b = 1.010; %wing span
