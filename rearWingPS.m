@@ -8,7 +8,7 @@ addPaths;
 
 
 %% Optimization
-optiPAR; %as output: lb and ub. Here it is possibile to define boundaries for optimization
+optiPAR_v1; %as output: lb and ub. Here it is possibile to define boundaries for optimization
 
 fun = @lapTime_objFun;
 nvars = 21;
@@ -21,7 +21,7 @@ days = 7;
 MaxTime = 60 * 60 * 24 * days;
 
 options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter',...
-                       'FunctionTolerance',1e-6,'MaxIterations',200*nvars,...
+                       'FunctionTolerance',1e-4,'MaxIterations',200*nvars,...
                        'MaxTime',MaxTime,'PlotFcn','pswplotbestf',...
                        'UseParallel',true,'UseVectorized',false);
                                       
