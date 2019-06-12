@@ -17,7 +17,7 @@ nvars = 21;
 parpool;
 
 %Max simulation time
-days = 1;
+days = 7;
 MaxTime = 60 * 60 * 24 * days;
 
 options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter',...
