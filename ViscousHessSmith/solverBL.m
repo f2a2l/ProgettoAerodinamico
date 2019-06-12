@@ -65,20 +65,25 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
     %theta = sqrt(.075/Re/ugrad(1)); % value from Moran
     theta = 0.29004 * sqrt(xi(2)/Re /ue(2));
     delta = 2.23641 * theta; % derived starting from Eppler's cond. on hek
-    % delta = 1.7507/sqrt(Re * ugrad(1));
     eta = 0;
 
     % initial conditions (auxiliary variables)
-    % hek = 1.61998; % WARNING: if you use this, set initial ii to 2 (Eppler)
     h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
-    % h = delta/theta;
     Retheta = Re * ue(2) * theta;
     Retmax = 1 + Retheta;
+
+    % trial for initial conditions on eta
+    Ret0 = RethetaCrit(h);
+    deta0 = detadre(h);
+    eta = deta0 * (Retheta - Ret0);
 
     % initialisation
     ii = 1; % counter for panels
     x_transition = x(end);
-    opts = optimset('Display','off'); % options for nonlinear solver
+    opts = optimoptions('fsolve', 'FunctionTolerance', 1e-9); % options for nonlinear solver
+    % 'Display','off', 'Algorithm', 'trust-region', 
+    opts.StepTolerance = 0;
+    opts.OptimalityTolerance = 0;
 
     while eta < 9 && Retheta < Retmax
 
@@ -184,6 +189,8 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
         ii = ii + 1;
 
     end
+
+    Cf = Cf .* ue.^2;
 
 end
 

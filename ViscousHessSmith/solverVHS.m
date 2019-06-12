@@ -241,27 +241,26 @@ classdef solverVHS
                 [warnOutB, x_transitionB, CfB] = solverBL(Re, xb, yb, ub, ht, 0, false);
                 disp(['Bottom transition at x = ' num2str(x_transitionB)])
 
-                if isempty(warnOutB) && isempty(warnOutT)
-                    xb(1) = [];
-                    CfB(1) = [];
-                    CfB = flip(CfB);
-                    Cf{k} = [CfB CfT];
-
-                    % plotting
-                    figName = ['Cf - airfoil ' int2str(k)];
-                    figure('Name', figName)
-                    hold on
-                    grid on
-                    plot(xb, CfB)
-                    plot(xt, CfT)
-                else
-                    for ii = 1:length(warnOutT)
-                        disp(warnOutT{ii})
-                    end
-                    for ii = 1:length(warnOutB)
-                        disp(warnOutB{ii})
-                    end
+                xb(1) = [];
+                CfB(1) = [];
+                CfB = flip(CfB);
+                Cf{k} = [CfB CfT];
+                
+                % plotting
+                figName = ['Cf - airfoil ' int2str(k)];
+                figure('Name', figName)
+                hold on
+                grid on
+                plot(xb, CfB)
+                plot(xt, CfT)
+            
+                for ii = 1:length(warnOutT)
+                    disp(warnOutT{ii})
                 end
+                for ii = 1:length(warnOutB)
+                    disp(warnOutB{ii})
+                end
+                
             
             end
 
