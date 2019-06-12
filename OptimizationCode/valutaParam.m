@@ -1,5 +1,7 @@
 % Min and Max values for the optimization procedure parameters
-
+clear all
+close all
+clc
 %% C1 - x position of 1st Mean Line control point
 min_c1 = [0.1 0.1]; %default = 0.01;
 max_c1 = [0.35 0.35]; %default = 0.96;
@@ -70,10 +72,10 @@ if min
 
 arflPar = [min_c1(1),min_c2(1),min_c3(1),min_c4(1),min_x_t(1),min_T(1),min_rho(1),min_beta_TE(1);...
 				min_c1(2),min_c2(2),min_c3(2),min_c4(2),min_x_t(2),min_T(2),min_rho(2),min_beta_TE(2)];
-[x_main, y_main, totLength] = multiGeometry(80, arflPar, [min_AoA(1) min_AoA(2)], [min_x min_y], min_c_flap,true)            
+[x_main, y_main, totLength] = multiGeometry(80, arflPar, [min_AoA(1) min_AoA(2)], [min_x min_y], min_c_flap,true);            
 else            
 arflPar = [max_c1(1),max_c2(1),max_c3(1),max_c4(1),max_x_t(1),max_T(1),max_rho(1),max_beta_TE(1);...
 				max_c1(2),max_c2(2),max_c3(2),max_c4(2),max_x_t(2),max_T(2),max_rho(2),max_beta_TE(2)];
            
-[x_main, y_main, totLength] = multiGeometry(80, arflPar, [max_AoA(1) max_AoA(2)], [max_x max_y], max_c_flap,true)
+[x_main, y_main, totLength] = multiGeometry(80, arflPar, [max_AoA(1) max_AoA(2)], [max_x max_y], max_c_flap,true);
 end
