@@ -1,4 +1,4 @@
-function [Cl, Cd, xmax, ymax, Cp, v, maxdCp, x, y, p, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha, varargin)
+function [Cl, Cd, xmax, ymax, Cp, v, maxdCp, x, y, p, p1, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha, varargin)
 % Usage:
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha)
 % - [Cl, Cd, Cp, maxdCp] = solverHS(npoint, aname, alpha, dist, crel)
@@ -12,6 +12,8 @@ function [Cl, Cd, xmax, ymax, Cp, v, maxdCp, x, y, p, SOL, metaPan, nairfoils] =
 metaPan = 0;
 
 if length(alpha) == 1 && isempty(varargin)
+
+    p1 = 0;
 
     nairfoils = 1;
     xmax = 1;
@@ -100,6 +102,8 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
         % ncp = ncp + 1;
         % maxdCp(i, 2) = max(Cp(ncp:end, i)) - min(Cp(ncp:end, i));
     end
+
+    
 
 
 else  

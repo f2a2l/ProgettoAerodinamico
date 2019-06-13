@@ -1,13 +1,10 @@
-function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
+function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
 %solverBL - inspired by J. Moran's INTGRL; solves integral boundary layer equations
 %starting at a stagnation point.
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
 %for turbulent flow.
 
-    % TODO: best fit for h_trans; remember it must be between 1.3 and 1.4 (necessarily >=1!)
-    if h_trans < 1
-        error('h1 cannot be < 1.')
-    end
+    h_trans = 1.35;
 
     %% input check
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -76,12 +73,15 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
     Ret0 = RethetaCrit(h);
     deta0 = detadre(h);
     eta = deta0 * (Retheta - Ret0);
+    
+    % start stability check
+    Rex = Re * xi(2) * ue(2);
+    Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
 
     % initialisation
-    ii = 1; % counter for panels
+    ii = 2; % counter for panels
     x_transition = x(end);
-    opts = optimoptions('fsolve', 'FunctionTolerance', 1e-9); % options for nonlinear solver
-    % 'Display','off', 'Algorithm', 'trust-region', 
+    opts = optimoptions('fsolve', 'Display', 'off', 'Algorithm', 'Levenberg-Marquardt', 'FunctionTolerance', 1e-9); % options for nonlinear solver
     opts.StepTolerance = 0;
     opts.OptimalityTolerance = 0;
 
@@ -114,16 +114,9 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
         f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii));
         [y, ~, exitFlag] = fsolve(f, guess_y, opts);
         eta = stepAmplInt(eta, dxi, theta, h, y(1), y(2));
-        if exitFlag > 1
-            warning(['at iteration ' int2str(ii) ', fsolve did not properly converge; exit flag ' int2str(exitFlag) '.'])
-        elseif exitFlag < 1
+        if ~(exitFlag == 3 || exitFlag == 1)
             warning(['at iteration ' int2str(ii) ', fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
         end
-
-        % correction if on second cell
-        % if ii == 2
-        %    theta(2) = theta(1);
-        % end
 
         % update variables
         theta = y(1);
@@ -139,7 +132,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, h_trans, varargin)
         else
             Rex = Re * xi(ii) * ue(ii);
             Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
-            % Retmax = RethetaCrit(h);
         end
 
     end
@@ -220,38 +212,6 @@ function xi = getSwiseCoord(x, y)
         xi(ii) = xi(ii-1) + sqrt(dx*dx + dy*dy);
     end
 end
-
-
-
-%% differentiate velocity
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% function  ugrad = gradVel(ue, xi)
-% 
-%     nx = length(ue);
-% 
-%     ugrad = zeros(1, nx); % external velocity gradient
-% 
-%     v1 = ue(3);
-%     x1 = xi(3);
-%     v2 = ue(1);
-%     x2 = xi(1);
-%     xi(nx+1) = xi(nx-2);
-%     for ii = 1:nx
-%         v3 = v1;
-%         x3 = x1;
-%         v1 = v2;
-%         x1 = x2;
-%         v2 = ue(nx-2);
-%         if ii < nx
-%             v2 = ue(ii+1);
-%         end
-%         x2 = xi(ii+1);
-%         fact = (x3 - x1)/(x2 - x1);
-%         ugrad(ii) = ((v2 - v1) * fact - (v3 - v1)/fact)/(x3-x2);
-%     end
-% 
-% end
 
 function ugrad = gradVel(ue, xi)
 

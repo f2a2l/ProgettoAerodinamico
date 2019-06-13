@@ -25,6 +25,7 @@ classdef solverVHS
         maxdCp
 
         panels
+        p1
         metaPan
 
         SOL
@@ -44,11 +45,11 @@ classdef solverVHS
             %solution depends only on the geometry, not on Re.
 
             if length(alpha) == 1 && isempty(varargin)
-                [Cl, Cd, xmax, ymax, Cp, v, maxdCp, x, y, p, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha);
+                [Cl, Cd, xmax, ymax, Cp, v, maxdCp, x, y, p, p1, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha);
             elseif length(alpha) > 1 && length(varargin) == 2
                 dist = varargin{1};
                 crel = varargin{2};
-                [Cl, Cd, xmax, ymax, Cp, v, maxdCp, x, y, p, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha, dist, crel);
+                [Cl, Cd, xmax, ymax, Cp, v, maxdCp, x, y, p, p1, SOL, metaPan, nairfoils] = solverHS(npoint, aname, alpha, dist, crel);
             else
                 error('wrong input; please check documentation.')
             end
@@ -75,6 +76,7 @@ classdef solverVHS
             obj.maxdCp = maxdCp;
 
             obj.panels = p;
+            obj.p1 = p1;
             obj.metaPan = metaPan;
 
             obj.SOL = SOL;
@@ -120,34 +122,17 @@ classdef solverVHS
                 xp = xpanc{k};
                 yp = ypanc{k};
 
-                vbot = u(1:idx);
-                xbot = xp(1:idx);
-                ybot = yp(1:idx);
-                % pbot = cptemp(1:idx); % DEBUG
+                vbot = u(1:(idx-1));
+                xbot = xp(1:(idx-1));
+                ybot = yp(1:(idx-1));
+
                 vbot = flip(vbot);
                 xbot = flip(xbot);
                 ybot = flip(ybot);
-                % pbot = flip(pbot); % DEBUG
 
                 vtop = u(idx:end);
                 xtop = xp(idx:end);
-                ytop = yp(idx:end);
-                % ptop = cptemp(idx:end); % DEBUG
-                
-                % DEBUG
-                % figure
-                % plot(xtop, ptop);
-                % figure
-                % plot(xbot, pbot);
-                % figure
-                % hold on
-                % plot(xtop,ytop)
-                % plot(xbot, ybot)
-                % legend({'top' 'bottom'})
-                % axis equal
-                % xtop
-                % ytop
-                % xbot
+                ytop = yp(idx:end);                
 
                 bldata{k,1} = [xtop'; ytop'; vtop'];
                 bldata{k,2} = [xbot'; ybot'; vbot'];
@@ -221,7 +206,16 @@ classdef solverVHS
         end
 
 
-        function getBL(obj, Re, ht)
+        function [Cl, Cd, Cl_s, Cd_s] = getBL(obj, Re, varargin)
+
+            Cdvisc = zeros(obj.nArfls, 1);
+            Cf = cell(1,obj.nArfls);
+
+            if isempty(varargin)
+                pltFlg = true;
+            else
+                pltFlg = varargin{1};
+            end
 
             for k=1:obj.nArfls
 
@@ -230,7 +224,7 @@ classdef solverVHS
                 xt = blt(1,:);
                 yt = blt(2,:);
                 ut = blt(3,:);
-                [warnOutT, x_transitionT, CfT] = solverBL(Re, xt, yt, ut, ht, 0, false);
+                [warnOutT, x_transitionT, CfT] = solverBL(Re, xt, yt, ut, 0, false);
                 disp(['Top transition at x = ' num2str(x_transitionT)])
 
                 % bottom
@@ -238,31 +232,46 @@ classdef solverVHS
                 xb = blb(1,:);
                 yb = blb(2,:);
                 ub = blb(3,:);
-                [warnOutB, x_transitionB, CfB] = solverBL(Re, xb, yb, ub, ht, 0, false);
+                [warnOutB, x_transitionB, CfB] = solverBL(Re, xb, yb, ub, 0, false);
                 disp(['Bottom transition at x = ' num2str(x_transitionB)])
 
-                xb(1) = [];
-                CfB(1) = [];
+                xb = flip(xb);
                 CfB = flip(CfB);
-                Cf{k} = [CfB CfT];
-                
+
                 % plotting
-                figName = ['Cf - airfoil ' int2str(k)];
-                figure('Name', figName)
-                hold on
-                grid on
-                plot(xb, CfB)
-                plot(xt, CfT)
-            
+                if pltFlg
+                    figName = ['Cf - airfoil ' int2str(k)];
+                    figure('Name', figName)
+                    hold on
+                    grid on
+                    CfB
+                    plot(xb, CfB, 'red', 'LineWidth',1.5)
+                    plot(xt, CfT, 'blue', 'LineWidth',1.5)
+                    legend({'bottom' 'top'})
+                end
+
+                Cf{k} = [CfB CfT];
+
                 for ii = 1:length(warnOutT)
                     disp(warnOutT{ii})
                 end
                 for ii = 1:length(warnOutB)
                     disp(warnOutB{ii})
                 end
-                
+
+                if obj.nArfls == 1
+                    Cdvisc = LoadsVisc(obj.panels, Cf{k}, obj.alpha);
+                else
+                    Cdvisc(k) = LoadsVisc(obj.p1(k), Cf{k}, obj.alpha(k));    
+                end
             
             end
+
+            Cl_s = obj.inviscidCFs{1};
+            Cd_s = obj.inviscidCFs{2} + Cdvisc;
+
+            Cl = sum(Cl_s);
+            Cd = sum(Cd_s);
 
         end
 
