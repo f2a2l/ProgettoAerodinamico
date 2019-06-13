@@ -71,7 +71,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     % trial for initial conditions on eta
     Ret0 = RethetaCrit(h);
     deta0 = detadre(h);
-    % eta = 9 - deta0 * (Ret0 - Retheta);
+    eta = 9 - deta0 * (Ret0 - Retheta);
     
     % start stability check
     Rex = Re * xi(2) * ue(2);

@@ -38,13 +38,10 @@ if length(alpha) == 1 && isempty(varargin)
     % Velocity
     [v] = Velocity(p, alpha1, 1, SOL); % need this for Cp
 
-    % Pressure - FIXME: fix calculation of maxdCp after reading Valarezo-Chin
-    maxdCp = zeros(1,2);
+    % Pressure
     [Cp] = PressureCoeff(v, 1);
-    ncp = floor(size(Cp,1)/2);
-    maxdCp(1,1) = max(Cp(1:ncp,1)) - min(Cp(1:ncp,1));
-    ncp = ncp + 1;
-    maxdCp(1,2) = max(Cp(ncp:end,1)) - min(Cp(ncp:end,1));
+    Cpmin = min(Cp);
+    maxdCp = abs(Cpmin - Cp(end));
 
 
 
@@ -88,7 +85,7 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
 
     % Preallocation of coefficients
     Cp = cell(1, nairfoils);
-    maxdCp = zeros(nairfoils, 2);
+    maxdCp = zeros(nairfoils, 1);
     Cl = zeros(nairfoils,1);
     Cd = zeros(nairfoils,1);
 
@@ -96,11 +93,10 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
     for i = 1:nairfoils
         Cp{i} = PressureCoeff(v{i}, 1);
         [Cl(i), Cd(i)] = Loads(p1(i), Cp{i}, alpha(i));
-        % FIXME: fix calculation of maxdCp after reading Valarezo-Chin
-        % ncp = floor(size(Cp,1)/2);
-        % maxdCp(i, 1) = max(Cp(1:ncp, i)) - min(Cp(1:ncp, i));
-        % ncp = ncp + 1;
-        % maxdCp(i, 2) = max(Cp(ncp:end, i)) - min(Cp(ncp:end, i));
+        % calculation of maxdCp for Valarezo-Chin
+        c = Cp{i};
+        minCp = min(c);
+        maxdCp(i) = abs(minCp-c(end));
     end
     
 
