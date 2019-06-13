@@ -1,4 +1,4 @@
-function [t] = lapTime_objFun(param)
+function [t] = lapTime_objFun_DEFINITIVA(param)
 
 % LAPTIME_OBJFUN Returns the time required for the Baku City Circuit 2nd Straight
 %
@@ -50,21 +50,27 @@ tic;
     
     %[Cl,Cd,totLength,~,~,~,~,~,~,~] = solverHS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap);
     %[Cl_DRS,Cd_DRS,totLength,~,~,~,~,~,~,~] = solverHS_DRS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap);
-    
-    problem = solverVHS(n_points, arflPar, [3, 6], [AoA_main AoA_flap],[x_flap y_flap],c_flap);
-    problem.maxdCp
+    %keyboard
+    problem = solverVHS(n_points, arflPar, [AoA_main AoA_flap],[x_flap y_flap],c_flap);
+    problem_DRS = solverVHS_DRS(n_points, arflPar, [AoA_main AoA_flap],[x_flap y_flap],c_flap);
+    %keyboard
+    %delta_cp = problem.maxdCp;
+    cp = problem.Cp;
+    cp_DRS = problem_DRS.Cp;
     
     %Stall check
-    [stall_or_not,Re] = stall(delta_cp, speed, chord);
-    
-    if stall == 0
-        
-        
-        [Cl, Cd, Cl_single, Cd_single] = problem.getBL(Re, plotCf);
-    
-        Cl = [Cl, Cl_DRS];
-        Cd = [Cd, Cd_DRS];
-    
+    stallCheck;
+    %[stall_or_not,~] = stall(delta_cp, [], c_flap);
+    %keyboard
+    if stall_flag == 0
+keyboard    
+    plotCf = false;    
+        [Cl_noDRS, Cd_noDRS, ~, ~] = problem.getBL(Re, plotCf);
+        [Cl_DRS, Cd_DRS, ~, ~] = problem_DRS.getBL(Re,plotCf);
+    keyboard % Serve la parte con DRS
+        Cl = [Cl_noDRS, Cl_DRS];
+        Cd = [Cd_noDRS, Cd_DRS];
+    keyboard
     %% XFOIL correction
     %TODO
     

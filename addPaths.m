@@ -2,7 +2,7 @@
 % can be accessed from parent directory. Please run this script at the beginning of any session.
 
 currDir = pwd;
-HSfolder = strcat(currDir,'/HessSmith');
+HSfolder = strcat(currDir,'/ViscousHessSmith');
 XFfolder = strcat(currDir,'/XFOIL');
 OPTIfolder = strcat(currDir,'/OptimizationCode');
 LAPfolder = strcat(currDir,'/Lap_Performance');

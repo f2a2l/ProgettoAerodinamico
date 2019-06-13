@@ -18,11 +18,15 @@ function [stall_or_not,Re] = stall(delta_cp, speed, chord)
 % Selected Mach number
 M = 0.15;
 
+if isempty(speed) 
+    Re = 5e6;
+else
+
 % Compute Reynols number
 nu = 1.5e-5;
 Re = speed * chord / nu;
 Re = round(Re,-5); % Reynols number approximation
-
+end
 
 % Prandtl - Glauert transformation given the Mach number M
 delta_cp = delta_cp / sqrt(1-M^2);

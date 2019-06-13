@@ -50,8 +50,8 @@ min_x = -0.02;%default = -0.02;
 max_x = 0.02; % default = 0.016;
 step_x = 0.01;
 
-min_y = -0.015;
-max_y = -0.03;
+min_y = -0.03;
+max_y = -0.015;
 step_y = 0.01;
 
 %% Flap Chord - (fraction of main airfoil chord, namely c = 1)
