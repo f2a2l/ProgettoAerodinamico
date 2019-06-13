@@ -102,9 +102,7 @@ elseif (~isempty(varargin)) && length(alpha) >= 2
         % ncp = ncp + 1;
         % maxdCp(i, 2) = max(Cp(ncp:end, i)) - min(Cp(ncp:end, i));
     end
-
     
-
 
 else  
     error('wrong input; see documentation for instructions on how to use this function.')

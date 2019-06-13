@@ -67,12 +67,11 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     % initial conditions (auxiliary variables)
     h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
     Retheta = Re * ue(2) * theta;
-    Retmax = 1 + Retheta;
 
     % trial for initial conditions on eta
     Ret0 = RethetaCrit(h);
     deta0 = detadre(h);
-    eta = deta0 * (Retheta - Ret0);
+    % eta = 9 - deta0 * (Ret0 - Retheta);
     
     % start stability check
     Rex = Re * xi(2) * ue(2);
@@ -155,27 +154,30 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     % keep on integrating
     while ii <= nx
 
-        % get dx and perform integration step
-        dx = xi(ii) - xi(ii-1);
-        yy = runge2(ii-1, ii, dx, yy, 2, ue, ugrad, Re);
+        %% get dx and perform integration step
+        %dx = xi(ii) - xi(ii-1);
+        %yy = runge2(ii-1, ii, dx, yy, 2, ue, ugrad, Re);
+%
+        %% unpack integration output
+        %theta(ii) = yy(1);
+        %h = h_of_h1(yy(2));
+%
+        %% get Re and Cf
+        %Retheta = Re * ue(ii) * theta(ii);
+        %Cf(ii) = cfturb(Retheta, h);
+%
+        %% check separation
+        %if h > 2.4
+        %    if showWarn
+        %        warning(['turbulent separation at x = ' num2str(x(ii))]);
+        %    end
+        %    warnOut{end+1} = 'turbulent separation';
+        %    warnOut{end+1} = x(ii);
+        %    return
+        %end
 
-        % unpack integration output
-        theta(ii) = yy(1);
-        h = h_of_h1(yy(2));
-
-        % get Re and Cf
-        Retheta = Re * ue(ii) * theta(ii);
-        Cf(ii) = cfturb(Retheta, h);
-
-        % check separation
-        if h > 2.4
-            if showWarn
-                warning(['turbulent separation at x = ' num2str(x(ii))]);
-            end
-            warnOut{end+1} = 'turbulent separation';
-            warnOut{end+1} = x(ii);
-            return
-        end
+        Rex = Re * xi(ii) * ue(ii);
+        Cf(ii) = 0.059 * Rex^(-0.2);
 
         % update counter
         ii = ii + 1;

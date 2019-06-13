@@ -55,7 +55,7 @@ classdef solverVHS
             end
 
             for k = nairfoils
-                v{k} = abs(v{k});
+                v{k} = v{k};
             end
                         
             obj.nArfls = nairfoils;
@@ -118,7 +118,7 @@ classdef solverVHS
                 [~, idx] = max(cptemp);
                 obj.stagnIdx(k) = idx;
 
-                u = v{k};
+                u = abs(v{k});
                 xp = xpanc{k};
                 yp = ypanc{k};
 
@@ -141,7 +141,7 @@ classdef solverVHS
 
             obj.bl = bldata;
 
-            disp(['Time elapsed for BL preprocessing: ' num2str(toc) ' seconds.'])
+            % disp(['Time elapsed for BL preprocessing: ' num2str(toc) ' seconds.'])
 
         end
 
@@ -244,7 +244,6 @@ classdef solverVHS
                     figure('Name', figName)
                     hold on
                     grid on
-                    CfB
                     plot(xb, CfB, 'red', 'LineWidth',1.5)
                     plot(xt, CfT, 'blue', 'LineWidth',1.5)
                     legend({'bottom' 'top'})
