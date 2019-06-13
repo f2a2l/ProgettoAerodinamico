@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#Run ParticleSwar Optimization in Matlab
+matlab -nodisplay -nodesktop -r "run rearWingPS.m"
+
+#Mesh
+#Read Output .dat files
+
+#CFD
+
