@@ -63,14 +63,14 @@ tic;
     %[stall_or_not,~] = stall(delta_cp, [], c_flap);
     %keyboard
     if stall_flag == 0
-keyboard    
+%keyboard    
     plotCf = false;    
         [Cl_noDRS, Cd_noDRS, ~, ~] = problem.getBL(Re, plotCf);
         [Cl_DRS, Cd_DRS, ~, ~] = problem_DRS.getBL(Re,plotCf);
-    keyboard % Serve la parte con DRS
+    %keyboard % Serve la parte con DRS
         Cl = [Cl_noDRS, Cl_DRS];
         Cd = [Cd_noDRS, Cd_DRS];
-    keyboard
+    %keyboard
     %% XFOIL correction
     %TODO
     
@@ -79,6 +79,7 @@ keyboard
         if min(sum(Cd)) > 0 && isreal(Cl) && isreal(Cd)
     
     %% 2D to 3D Correction
+        totLength = problem.xmax;
         b = 1.010; %wing span
         h = 0.67; %endplate height
         lambda = b / totLength;

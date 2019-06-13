@@ -14,7 +14,7 @@ fun = @lapTime_objFun_DEFINITIVA;
 nvars = 21;
 
 %Starts ParallelPool for Parallel Computation
-%parpool;
+parpool;
 
 %Max simulation time
 days = 7;
@@ -23,7 +23,7 @@ MaxTime = 60 * 60 * 24 * days;
 options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter',...
                        'FunctionTolerance',1e-4,'MaxIterations',200*nvars,...
                        'MaxTime',MaxTime,'PlotFcn','pswplotbestf',...
-                       'UseParallel',false,'UseVectorized',false);
+                       'UseParallel',true,'UseVectorized',false);
                                       
 [optimalSolution,fval,exitflag,output] = particleswarm(fun,nvars,lb,ub,options);
 
