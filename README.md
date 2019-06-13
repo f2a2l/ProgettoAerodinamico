@@ -6,6 +6,51 @@ Credits:
 
 
 
+## Viscous Hess Smith
+
+PER FABIO: nell’ottimizzazione, metterei:
+
+```MATLAB
+try
+	problem.getBL(...);
+catch
+	% inserisci penalità
+end
+```
+
+
+
+Profilo singolo:
+
+```MATLAB
+arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
+problem = solverVHS(80, arflPar, 3);
+problem.maxdCp % massimo dCp per Valarezo
+problem.plotCp();
+problem.plotUe();
+Re = 1e6;
+plotCf = true;
+[Cl, Cd] = problem.getBL(Re, plotCf);
+```
+
+Multi profilo:
+
+```MATLAB
+arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5;
+           0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
+problem = solverVHS(80, arflPar, [3, 6], [-0.05, -0.05], 0.3);
+problem.maxdCp % massimo dCp su ogni profilo per Valarezo
+problem.plotCp();
+problem.plotUe();
+Re = 1e6;
+plotCf = true;
+[Cl, Cd, Cl_single, Cd_single] = problem.getBL(Re, plotCf);
+```
+
+
+
+
+
 ## Multi-element geometry
 
 To deal with multiple geometries, the following conventions have been adopted:
