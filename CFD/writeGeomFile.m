@@ -1,4 +1,4 @@
-function writeGeomFile(x,y,z,n,name)
+function writeGeomFile(x,y,z,name)
 
 % WRITEGEOMFILE writes a .dat file containing (x,y,z) coordinates
 %
@@ -6,10 +6,17 @@ function writeGeomFile(x,y,z,n,name)
 %
 % Example:
 %
-%   writeGeomFile(x,y,z,20,naca0012)
+%   writeGeomFile(x,y,z,naca0012)
+
 
 name = strcat(name,'.dat');
+
+n = length(x);
 npoints = num2str(n);
+
+if isempty(z)
+    z = zeros(length(x),1);
+end
 
 fid = fopen(name,'w');
 fprintf(fid, npoints);
