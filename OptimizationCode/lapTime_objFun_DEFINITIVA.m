@@ -73,10 +73,10 @@ tic;
     %keyboard
     %% XFOIL correction
     %TODO
-    
+    %keyboard
     %% Check Quality of results
     %if min(min(min(Cl,Cd))) > -1 && isreal(Cl) && isreal(Cd)
-        if min(sum(Cd)) > 0 && isreal(Cl) && isreal(Cd)
+        if Cd(1) > 0 && Cd(2) > 0 && isreal(Cl) && isreal(Cd)
     
     %% 2D to 3D Correction
         totLength = problem.xmax;
