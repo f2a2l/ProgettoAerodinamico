@@ -8,9 +8,6 @@ function[Cl_new,Cd_new] = FWcorrections(Cl,Cd_0,lambda,b,h)
 % s = correction factor
 % t = correction factor
 
-Cl = sum(Cl');
-Cd_0 = sum(Cd_0');
-
 [t,s] = corr2dto3d(lambda);
 
 % endplates correction
