@@ -108,18 +108,20 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         end
 
         % integration of bl: forward/backward Euler
-        guess_y = [theta, delta];
+        guess_y = [theta; delta];
         dxi = xi(ii) - xi(ii-1);
         f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii));
-        [y, ~, exitFlag] = fsolve(f, guess_y, opts);
-        eta = stepAmplInt(eta, dxi, theta, h, y(1), y(2));
-        if ~(exitFlag == 3 || exitFlag == 1)
-            warning(['at iteration ' int2str(ii) ', fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
-        end
+        J = @(a) jacobLamInt(a, Re, theta, delta, dxi, ue(ii), ugrad(ii));
+        % [yy, ~, exitFlag] = fsolve(f, guess_y, opts);
+        yy = newtonRaphson(f, J, guess_y, 1e-10, 100);
+        eta = stepAmplInt(eta, dxi, theta, h, yy(1), yy(2));
+        %if ~(exitFlag == 3 || exitFlag == 1)
+        %    warning(['at iteration ' int2str(ii) ', fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
+        %end
 
         % update variables
-        theta = y(1);
-        delta = y(2);
+        theta = yy(1);
+        delta = yy(2);
         h = delta/theta;
         Retheta = Re * theta * ue(ii);
 
@@ -246,13 +248,21 @@ end
 
 
 
-%% kinematic shape parameter
+%% energy shape parameter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function hs = hek_of_h(h)
     if h < 4
         hs = 1.515 + 0.076*((4-h)^2)/h;
     else
         hs = 1.515 + 0.040*((h-4)^2)/h;
+    end
+end
+
+function dh = dhek_dh(h)
+    if h < 4
+        dh = 0.076*(1-(16/h^2));
+    else
+        dh = 0.040*(1-(16/h^2));
     end
 end
 
@@ -269,6 +279,24 @@ function cf = cflam(Ret, h)
     cf = 2 * lhs /Ret;
 end
 
+function dcf = dcf_dret(Ret, h)
+    if h < 7.4
+        lhs = -0.067 + 0.01977*((7.4-h)^2)/(h-1);
+    else
+        lhs = -0.067 + 0.022*(1 - 1.4/(h-6))^2;
+    end
+    dcf = -2*lhs/Ret^2;
+end
+
+function dcf = dcf_dh(Ret, h)
+    if h < 7.4
+        lhs = 0.01977*((h^2 - 2*h - 39.96)/(h-1)^2);
+    else
+        lhs = 0.022*(2.8*h - 20.72)/(h-6)^3;
+    end
+    dcf = 2 * lhs /Ret;
+end
+
 
 
 %% local dissipation coefficient
@@ -280,6 +308,33 @@ function cds = cdiss(Ret, hek, h)
         lhs = 0.207 - 0.003 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
     end
     cds = lhs * hek /2 /Ret;
+end
+
+function dcds = dcdiss_dret(Ret, hek, h)
+    if h < 4
+        lhs = 0.207 + 0.00205 * (4-h)^(5.5);
+    else
+        lhs = 0.207 - 0.003 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
+    end
+    dcds = -lhs * hek /2 /Ret^2;
+end
+
+function dcds = dcdiss_dhek(Ret, hek, h)
+    if h < 4
+        lhs = 0.207 + 0.00205 * (4-h)^(5.5);
+    else
+        lhs = 0.207 - 0.003 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
+    end
+    dcds = lhs /2 /Ret;
+end
+
+function dcds = dcdiss_dh(Ret, hek, h)
+    if h < 4
+        lhs = 0.00205 * (-5.5)*(4-h)^(4.5);
+    else
+        lhs = - 0.003 * (5000*h - 20000)/(h^2 - 8*h + 66)^2;
+    end
+    dcds = lhs * hek /2 /Ret;
 end
 
 
@@ -305,17 +360,61 @@ function y = stepLamInt(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad)
     h = delta/theta; % old h
     hek = hek_of_h(h); % old hek
     Ret = Re * ue * theta;
-    
 
-    % momentum thickness and energy shape parameter equations: BACKWARDS EULER
+    % momentum thickness equation: CRANK NICHOLSON
     y(1) = (n_theta - theta)/dxi ...
             + (2+n_h)*(n_theta/n_ue)*n_ugrad/2 - cflam(n_Ret, n_h)/4 ...
             + (2+  h)*  (theta/  ue)*  ugrad/2 - cflam(  Ret,   h)/4;
+
+    % energy shape parameter equation: BACKWARDS EULER
     y(2) = n_theta*(n_hek-hek)/dxi ...
             + (n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h) ...
             + n_hek*cflam(n_Ret, n_h)/2;
     
-    
+end
+
+
+
+%% derivatives of equation for laminar integration step
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function J = jacobLamInt(x, Re, theta, delta, dxi, n_ue, n_ugrad)
+% LEGEND: plain variables = old variables; n_variables = new variables
+
+    % preallocation
+    J = zeros(2,2);
+
+    % unpack input
+    n_theta = x(1); % theta_(n+1)
+    n_delta = x(2); % delta_(n+1)
+
+    % preprocessing: new auxiliary variables
+    n_Ret = Re * n_ue * n_theta; % Re_theta
+    n_h = n_delta/n_theta; % new h = d/theta
+    n_hek = hek_of_h(n_h); % new hek(h)
+
+    % preprocessing: old auxiliary variables
+    h = delta/theta; % old h
+    hek = hek_of_h(h); % old hek
+
+    % derivative of momentum thickness equation wrt momentum thickness
+    J(1,1) = 1/dxi + n_ugrad/n_ue - dcf_dret(n_Ret,n_h)*Re*n_ue/4 + dcf_dh(n_Ret,n_h)*n_h/n_theta/4;
+
+    % derivative of momentum thickness equation wrt displacement thickness
+    J(1,2) = n_ugrad/2/n_ue - dcf_dh(n_Ret,n_h)/4/n_theta;
+
+    % derivative of energy shape parameter eqn wrt momentum thickness
+    J(2,1) = (n_hek - hek)/dxi ...
+                + dhek_dh(n_h) * (2*dcdiss_dhek(n_Ret,n_hek,n_h)*n_h/n_Ret - n_h/dxi ...
+                                    - n_ugrad*n_h*(1-n_h)/n_ue - n_h*cflam(n_Ret,n_h)/2/n_theta) ...
+                + n_hek * (n_ugrad/n_ue - dcf_dh(n_Ret,n_h)*n_h/n_theta/2) ...
+                + Re * n_ue * (n_hek * dcf_dret(n_Ret,n_h)/2 - 2*dcdiss_dret(n_Ret,n_hek,n_h)) ...
+                + 2 * dcdiss_dh(n_Ret,n_hek,n_h) * n_h / n_theta;
+
+    % derivative of momentum thickness equation wrt displacement thickness
+    J(2,2) = dhek_dh(n_h) * (1/dxi + (1-n_h)*n_ugrad/n_ue) - n_hek/n_ue*n_ugrad ...
+                + ((dhek_dh(n_h)*cflam(n_Ret,n_h) + n_hek*dcf_dh(n_Ret,n_h))/2 ...
+                    - 2*(dcdiss_dhek(n_Ret,n_hek,n_h)*dhek_dh(n_h) + dcdiss_dh(n_Ret,n_hek,n_h)))/n_theta;
+
 end
 
 
