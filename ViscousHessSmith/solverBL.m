@@ -215,6 +215,10 @@ function xi = getSwiseCoord(x, y)
     end
 end
 
+
+
+%% calculate velocity gradient
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function ugrad = gradVel(ue, xi)
 
     ugrad = zeros(size(ue));
@@ -232,9 +236,18 @@ end
 
 
 
-%% laminar closure: Drela and Giles
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% LAMINAR CLOSURE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+%% kinematic shape parameter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function hs = hek_of_h(h)
     if h < 4
         hs = 1.515 + 0.076*((4-h)^2)/h;
@@ -243,34 +256,10 @@ function hs = hek_of_h(h)
     end
 end
 
-function h = h_of_hek(hek, guess_h) % possibly deprecated
-    if hek < 1.515
-        error('too low value of hek; laminar flow should be separated (possibly originating a transition bubble).')
-    elseif hek < 1.51509 % give it a little error margin
-        h = 4;
-    else
-        f = @(x) hek_of_h(x) - hek;
-        [h, ~, exitFlag] = fzero(f, guess_h);
-        if exitFlag ~= 1
-            error(['fzero did not converge; exit flag ' int2str(exitFlag) '.'])
-        end
-    end
-end
 
-function h = h_of_hek_eppler(hek) % possibly deprecated
-%h_of_hek - empirical formula from Eppler.
-% This one provides a good fit of the previous one (hek_of_h) for 1.8574 < h < 4 (1.515 < hek < 1.7515).
-% However, the inverse of hek(h) is NOT A FUNCTION - so this is basically just one branch of the inverse.
-% Might be useful for initial value.
-    if hek < 1.515
-        error('too low value of hek.')
-    elseif hek < 1.57258
-        h = 4.02922 - (583.60182 - 724.55916*hek + 227.1822*hek.^2) * sqrt(hek - 1.515);
-    else
-        h = 79.870845 - 89.582142*hek + 25.715786*hek.^2;
-    end
-end
 
+%% local skin friction coefficient
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function cf = cflam(Ret, h)
     if h < 7.4
         lhs = -0.067 + 0.01977*((7.4-h)^2)/(h-1);
@@ -280,6 +269,10 @@ function cf = cflam(Ret, h)
     cf = 2 * lhs /Ret;
 end
 
+
+
+%% local dissipation coefficient
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function cds = cdiss(Ret, hek, h)
     if h < 4
         lhs = 0.207 + 0.00205 * (4-h)^(5.5);
@@ -289,25 +282,10 @@ function cds = cdiss(Ret, hek, h)
     cds = lhs * hek /2 /Ret;
 end
 
-function hd = hdens(h)
-    % hd = 0.064/(h-0.8) + 0.251;
-    hd = 0; % since Me = 0
-end
 
-function [l, m] = lm(h)
-    l = (6.54*h - 14.07)/h^2;
-    m = (0.058*((h-4)^2)/(h-1) - 0.068)/l;
-end
 
-function diff = detadre(h)
-    diff = 0.01*sqrt(((2.4*h - 3.7 + 2.5*tanh(1.5*h-4.65))^2)+0.25);
-end
-
-function ret0 = RethetaCrit(h)
-    lhs = (1.415/(h-1)-0.489)*tanh(20/(h-1)-12.9) + 3.295/(h-1) + 0.44;
-    ret0 = 10^lhs;
-end
-
+%% implicit equation for laminar integration step
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function y = stepLamInt(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad)
 
     y = zeros(size(x)); % preallocation
@@ -334,12 +312,52 @@ function y = stepLamInt(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad)
             + (2+n_h)*(n_theta/n_ue)*n_ugrad/2 - cflam(n_Ret, n_h)/4 ...
             + (2+  h)*  (theta/  ue)*  ugrad/2 - cflam(  Ret,   h)/4;
     y(2) = n_theta*(n_hek-hek)/dxi ...
-            + (2*hdens(n_h) + n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h) ...
+            + (n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h) ...
             + n_hek*cflam(n_Ret, n_h)/2;
     
     
 end
 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% WAVE AMPLIFICATION CLOSURE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%% l and m
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [l, m] = lm(h)
+    l = (6.54*h - 14.07)/h^2;
+    m = (0.058*((h-4)^2)/(h-1) - 0.068)/l;
+end
+
+
+
+%% derivative of eta with respect to Re theta
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function diff = detadre(h)
+    diff = 0.01*sqrt(((2.4*h - 3.7 + 2.5*tanh(1.5*h-4.65))^2)+0.25);
+end
+
+
+
+%% critical Re theta (possilby deprecated)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function ret0 = RethetaCrit(h)
+    lhs = (1.415/(h-1)-0.489)*tanh(20/(h-1)-12.9) + 3.295/(h-1) + 0.44;
+    ret0 = 10^lhs;
+end
+
+
+
+%% wave amplification integration step
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function n_eta = stepAmplInt(eta, dxi, theta, h, n_theta, n_delta)
 
     n_h = n_delta/n_theta;
@@ -360,26 +378,30 @@ end
 
 
 
-%% turbulent closure: Head's correlation formula
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% TURBULENT CLOSURE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function h1 = h1_of_h(h)
 
+
+%% Head's correlation formula
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function h1 = h1_of_h(h)
     if h > 1.6
         h1 = 3.3 + 1.5501*(h - .6778)^(-3.064);
     else
         h1 = 3.3 + .8234*(h - 1.1)^(-1.287);
     end
-
 end
 
 
 
-%% turbulent closure: inverse Head's correlation formula
+%% inverse Head's correlation formula
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-
 function h = h_of_h1(h1)
-
     if h1 < 3.3
         h = 3.0;
     elseif h1 < 5.3
@@ -387,25 +409,20 @@ function h = h_of_h1(h1)
     else
         h = 1.1 + .86*(h1 - 3.3)^(-.777);
     end
-
 end
 
 
 
-%% turbulent closure: Ludwieg-Tillman skin friction formula
+%% Ludwieg-Tillman skin friction formula
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-
 function cf = cfturb(rtheta, h)
-
     cf = .246 * (10 ^(-.678*h)) * rtheta^(-.268);
-
 end
 
 
 
-%% turbulent integration: derivatives
+%% derivatives for integration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-
 function ypr = derivs(ii, yt, yp, ue, ugrad, Re)
 
     h1 = yt(2);
@@ -426,9 +443,8 @@ end
 
 
 
-%% turbulent integration: Runge-Kutta 2
+%% Runge-Kutta 2 integration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-
 function yy_out = runge2(i0, i1, dx, yy, n, ue, ugrad, Re)
 
     intvls = i1 - i0;
