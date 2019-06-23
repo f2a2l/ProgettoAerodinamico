@@ -83,11 +83,8 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     % initialisation
     ii = 2; % counter for panels
     x_transition = x(end);
-    opts = optimoptions('fsolve', 'Display', 'off', 'Algorithm', 'Levenberg-Marquardt', 'TolX', 1e-6); % options for nonlinear solver
-    % 'Display', 'off',
-    opts.StepTolerance = 0;
-    opts.OptimalityTolerance = 0;
 
+    % cycle over stations
     while eta < 9 && Retheta < Retmax
 
         % calculate skin friction factor
@@ -102,12 +99,12 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         % integration of bl
         guess_y = [theta; delta];
         dxi = xi(ii) - xi(ii-1);
-        
-        % LEVENBERG MARQUARDT - TODO: change name of the function
+
+        % LEVENBERG MARQUARDT
         minthick = min(abs(theta), abs(delta));
         TOL = min(1e-2, minthick) * 1e-4;
         kbias = 1;
-        lambda_lq = 10;
+        lambda_lq = 10; % 0 for Newton Raphson
         f = @(a) stepLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), kbias, L);
         J = @(a) jacobLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), kbias, L);
         yy = levenMarq(f, J, guess_y, lambda_lq, TOL, 10000, ii);
