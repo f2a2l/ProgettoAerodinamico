@@ -6,7 +6,7 @@ function  [x,ii] = autoNewtonRaphson(f, x0, TOLL, MAXITER, varargin)
         dbgFLAG = false;
     end
 
-    delta = TOLL * 1e-4; % delta_x used to calculate Jacobian at given point
+    delta = TOLL * 1e-7; % delta_x used to calculate Jacobian at given point
 
     ii = 1;
     dx = TOLL + 1;

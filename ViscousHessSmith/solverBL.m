@@ -83,7 +83,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     % initialisation
     ii = 2; % counter for panels
     x_transition = x(end);
-    opts = optimoptions('fsolve', 'Display', 'off', 'Algorithm', 'Levenberg-Marquardt'); % options for nonlinear solver
+    opts = optimoptions('fsolve', 'Display', 'off', 'Algorithm', 'Levenberg-Marquardt', 'TolX', 1e-6); % options for nonlinear solver
     % 'Display', 'off',
     opts.StepTolerance = 0;
     opts.OptimalityTolerance = 0;
@@ -104,17 +104,25 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         dxi = xi(ii) - xi(ii-1);
 
         % FSOLVE
-        f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), L);
-        [yy, ~, exitFlag] = fsolve(f, guess_y, opts);
-        if ~(exitFlag == 3 || exitFlag == 1)
-            warning(['at iteration ' int2str(ii) ', fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
-        end
+        % f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), L);
+        % [yy, ~, exitFlag] = fsolve(f, guess_y, opts);
+        % if ~(exitFlag == 3 || exitFlag == 1)
+        %     warning(['at iteration ' int2str(ii) ', fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
+        % end
+
+        % AUTO NEWTON RAPHSON
+        % minthick = min(abs(theta), abs(delta));
+        % TOL = min(1e-2, minthick) * 1e-4;
+        % % f = @(a) stepLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), .9, L);
+        % f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), L);
+        % yy = autoNewtonRaphson(f, guess_y, TOL, 1000);
 
         % NEWTON RAPHSON
-        % minthick = min(abs(theta), abs(delta));
-        % TOL = min(1e-6, minthick) * 1e-4;
-        % f = @(a) stepLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), 0.74, L);
-        % yy = autoNewtonRaphson(f, guess_y, TOL, 1000);
+        minthick = min(abs(theta), abs(delta));
+        TOL = min(1e-2, minthick) * 1e-4;
+        f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), L);
+        J = @(a) jacobLamInt(a, Re, theta, delta, dxi, ue(ii), ugrad(ii), L);
+        yy = newtonRaphson(f, J, guess_y, TOL, 10000);
 
         % integration of wave amplification
         eta = stepAmplInt(eta, dxi, theta, h, yy(1), yy(2));
@@ -411,22 +419,22 @@ function J = jacobLamInt(x, Re, theta, delta, dxi, n_ue, n_ugrad, L)
     hek = hek_of_h(h); % old hek
 
     % derivative of momentum thickness equation wrt momentum thickness
-    J(1,1) = 1/dxi + n_ugrad/n_ue - dcf_dret(n_Ret,n_h)*Re*n_ue/4 + dcf_dh(n_Ret,n_h)*n_h/n_theta/4;
+    J(1,1) = 1/dxi + n_ugrad/n_ue - dcf_dret(n_Ret,n_h,L)*Re*n_ue/4 + dcf_dh(n_Ret,n_h,L)*n_h/n_theta/4;
 
     % derivative of momentum thickness equation wrt displacement thickness
-    J(1,2) = n_ugrad/2/n_ue - dcf_dh(n_Ret,n_h)/4/n_theta;
+    J(1,2) = n_ugrad/2/n_ue - dcf_dh(n_Ret,n_h,L)/4/n_theta;
 
     % derivative of energy shape parameter eqn wrt momentum thickness
     J(2,1) = (n_hek - hek)/dxi ...
                 + dhek_dh(n_h) * (2*dcdiss_dhek(n_Ret,n_hek,n_h, L)*n_h/n_Ret - n_h/dxi ...
                                     - n_ugrad*n_h*(1-n_h)/n_ue - n_h*cflam(n_Ret,n_h,L)/2/n_theta) ...
-                + n_hek * (n_ugrad/n_ue - dcf_dh(n_Ret,n_h)*n_h/n_theta/2) ...
-                + Re * n_ue * (n_hek * dcf_dret(n_Ret,n_h)/2 - 2*dcdiss_dret(n_Ret,n_hek,n_h, L)) ...
+                + n_hek * (n_ugrad/n_ue - dcf_dh(n_Ret,n_h,L)*n_h/n_theta/2) ...
+                + Re * n_ue * (n_hek * dcf_dret(n_Ret,n_h,L)/2 - 2*dcdiss_dret(n_Ret,n_hek,n_h, L)) ...
                 + 2 * dcdiss_dh(n_Ret,n_hek,n_h,L) * n_h / n_theta;
 
     % derivative of momentum thickness equation wrt displacement thickness
     J(2,2) = dhek_dh(n_h) * (1/dxi + (1-n_h)*n_ugrad/n_ue) - n_hek/n_ue*n_ugrad ...
-                + ((dhek_dh(n_h)*cflam(n_Ret,n_h,L) + n_hek*dcf_dh(n_Ret,n_h))/2 ...
+                + ((dhek_dh(n_h)*cflam(n_Ret,n_h,L) + n_hek*dcf_dh(n_Ret,n_h,L))/2 ...
                     - 2*(dcdiss_dhek(n_Ret,n_hek,n_h,L)*dhek_dh(n_h) + dcdiss_dh(n_Ret,n_hek,n_h,L)))/n_theta;
 
 end
