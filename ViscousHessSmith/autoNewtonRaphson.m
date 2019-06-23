@@ -1,12 +1,15 @@
 function  [x,ii] = autoNewtonRaphson(f, x0, TOLL, MAXITER, varargin)
 
+    N = length(f(x0));
+
     if ~isempty(varargin)
         dbgFLAG = varargin{1};
     else
         dbgFLAG = false;
     end
 
-    delta = TOLL * 1e-7; % delta_x used to calculate Jacobian at given point
+    delta = TOLL * 1e-6; % delta_x used to calculate Jacobian at given point
+    lambda = 10;
 
     ii = 1;
     dx = TOLL + 1;
@@ -14,7 +17,7 @@ function  [x,ii] = autoNewtonRaphson(f, x0, TOLL, MAXITER, varargin)
     while dx > TOLL
 
         J = autoJacob(f, delta, x0);
-        dx = J\(-f(x0));
+        dx = (J'*J + lambda*eye(N)) \ (-J'*f(x0));
         x = x0 + dx;
 
         ii = ii + 1;

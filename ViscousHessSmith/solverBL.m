@@ -113,8 +113,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         % AUTO NEWTON RAPHSON
         % minthick = min(abs(theta), abs(delta));
         % TOL = min(1e-2, minthick) * 1e-4;
-        % % f = @(a) stepLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), .9, L);
-        % f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), L);
+        % f = @(a) stepLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), 0.9, L);
         % yy = autoNewtonRaphson(f, guess_y, TOL, 1000);
 
         % NEWTON RAPHSON
@@ -122,7 +121,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         TOL = min(1e-2, minthick) * 1e-4;
         f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), L);
         J = @(a) jacobLamInt(a, Re, theta, delta, dxi, ue(ii), ugrad(ii), L);
-        yy = newtonRaphson(f, J, guess_y, TOL, 10000);
+        yy = newtonRaphson(f, J, guess_y, TOL, 100000);
 
         % integration of wave amplification
         eta = stepAmplInt(eta, dxi, theta, h, yy(1), yy(2));

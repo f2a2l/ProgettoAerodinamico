@@ -3,11 +3,11 @@ function  [x,ii] = newtonRaphson(f, df, x0, TOLL, MAXITER)
     N = length(f(x0));
 
     ii = 1;
-    dx = TOLL + 1;
+    ff = TOLL + 1;
 
-    lambda = 0.3;
+    lambda = 10;
 
-    while dx > TOLL
+    while ff > TOLL
 
         J = df(x0);
 
@@ -23,7 +23,12 @@ function  [x,ii] = newtonRaphson(f, df, x0, TOLL, MAXITER)
 
         dx = norm(dx);
         x0 = x;
+        ff = norm(f(x0));
+
 
     end
+
+    norm(f(x0))
+    ii
 
 end
