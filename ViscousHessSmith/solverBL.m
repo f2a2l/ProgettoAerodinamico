@@ -102,26 +102,15 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         % integration of bl
         guess_y = [theta; delta];
         dxi = xi(ii) - xi(ii-1);
-
-        % FSOLVE
-        % f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), L);
-        % [yy, ~, exitFlag] = fsolve(f, guess_y, opts);
-        % if ~(exitFlag == 3 || exitFlag == 1)
-        %     warning(['at iteration ' int2str(ii) ', fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
-        % end
-
-        % AUTO NEWTON RAPHSON
-        % minthick = min(abs(theta), abs(delta));
-        % TOL = min(1e-2, minthick) * 1e-4;
-        % f = @(a) stepLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), 0.9, L);
-        % yy = autoNewtonRaphson(f, guess_y, TOL, 1000);
-
-        % NEWTON RAPHSON
+        
+        % LEVENBERG MARQUARDT - TODO: change name of the function
         minthick = min(abs(theta), abs(delta));
         TOL = min(1e-2, minthick) * 1e-4;
-        f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), L);
-        J = @(a) jacobLamInt(a, Re, theta, delta, dxi, ue(ii), ugrad(ii), L);
-        yy = newtonRaphson(f, J, guess_y, TOL, 100000);
+        kbias = 1;
+        lambda_lq = 10;
+        f = @(a) stepLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), kbias, L);
+        J = @(a) jacobLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), kbias, L);
+        yy = levenMarq(f, J, guess_y, lambda_lq, TOL, 10000, ii);
 
         % integration of wave amplification
         eta = stepAmplInt(eta, dxi, theta, h, yy(1), yy(2));
@@ -322,43 +311,7 @@ end
 
 
 
-%% implicit equation for laminar integration step
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function y = stepLamInt(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad, L)
-
-    y = zeros(size(x)); % preallocation
-
-    % LEGEND: plain variables = old variables; n_variables = new variables
-
-    % unpack input
-    n_theta = x(1); % theta_(n+1)
-    n_delta = x(2); % delta_(n+1)
-
-    % preprocessing: new auxiliary variables
-    n_Ret = Re * n_ue * n_theta; % Re_theta
-    n_h = n_delta/n_theta; % new h = d/theta
-    n_hek = hek_of_h(n_h); % new hek(h)
-
-    % preprocessing: old auxiliary variables
-    h = delta/theta; % old h
-    hek = hek_of_h(h); % old hek
-    Ret = Re * ue * theta;
-
-    % momentum thickness equation: CRANK NICHOLSON
-    y(1) = (n_theta - theta)/dxi ...
-            + (2+n_h)*(n_theta/n_ue)*n_ugrad/2 - cflam(n_Ret, n_h, L)/4 ...
-            + (2+  h)*  (theta/  ue)*  ugrad/2 - cflam(  Ret,   h, L)/4;
-
-    % energy shape parameter equation: BACKWARDS EULER
-    y(2) = n_theta*(n_hek-hek)/dxi ...
-            + (n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h, L) ...
-            + n_hek*cflam(n_Ret, n_h, L)/2;
-    
-end
-
-
-
-%% implicit equation for laminar integration step
+%% biased implicit equation for laminar integration step
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function y = stepLamIntBias(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad, kbias, L)
 
@@ -386,58 +339,67 @@ function y = stepLamIntBias(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad, 
             + (2+  h)*  (theta/  ue)*  ugrad/2 - cflam(  Ret,   h, L)/4;
 
     % energy shape parameter equation: BACKWARDS EULER
-    y(2) = (n_hek-hek)/dxi ...
-            + kbias / n_theta * ((n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h, L) ...
+    y(2) = n_theta*(n_hek-hek)/dxi ...
+            + kbias * ((n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h, L) ...
                         + n_hek*cflam(n_Ret, n_h, L)/2) ...
-            + (1-kbias) /theta*((hek*(1-h))*(theta/ue)*ugrad - 2*cdiss(Ret, hek, h, L) ...
+            + (1-kbias) * n_theta/theta*((hek*(1-h))*(theta/ue)*ugrad - 2*cdiss(Ret, hek, h, L) ...
                         + hek*cflam(Ret, h, L)/2);
     
 end
 
 
 
-%% derivatives of equation for laminar integration step
+%% biased derivatives of equation for laminar integration step
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function J = jacobLamInt(x, Re, theta, delta, dxi, n_ue, n_ugrad, L)
-% LEGEND: plain variables = old variables; n_variables = new variables
+function J = jacobLamIntBias(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad, kbias, L)
+    % LEGEND: plain variables = old variables; n_variables = new variables
+    
+        % preallocation
+        J = zeros(2,2);
+    
+        % unpack input
+        n_theta = x(1); % theta_(n+1)
+        n_delta = x(2); % delta_(n+1)
+    
+        % preprocessing: new auxiliary variables
+        n_Ret = Re * n_ue * n_theta; % Re_theta
+        n_h = n_delta/n_theta; % new h = d/theta
+        n_hek = hek_of_h(n_h); % new hek(h)
+    
+        % preprocessing: old auxiliary variables
+        h = delta/theta; % old h
+        hek = hek_of_h(h); % old hek
+        Ret = Re * ue * theta;
+    
+        % derivative of momentum thickness equation wrt momentum thickness
+        J(1,1) = 1/dxi + n_ugrad/n_ue - dcf_dret(n_Ret,n_h,L)*Re*n_ue/4 + dcf_dh(n_Ret,n_h,L)*n_h/n_theta/4;
+    
+        % derivative of momentum thickness equation wrt displacement thickness
+        J(1,2) = n_ugrad/2/n_ue - dcf_dh(n_Ret,n_h,L)/4/n_theta;
+    
+        % derivative of energy shape parameter eqn wrt momentum thickness
+        J(2,1) = (n_hek - hek)/dxi - n_h/dxi*dhek_dh(n_h) ...
+                    + kbias * ( ...
+                        + dhek_dh(n_h) * (2*dcdiss_dhek(n_Ret,n_hek,n_h, L)*n_h/n_Ret  ...
+                                            - n_ugrad*n_h*(1-n_h)/n_ue - n_h*cflam(n_Ret,n_h,L)/2/n_theta) ...
+                        + n_hek * (n_ugrad/n_ue - dcf_dh(n_Ret,n_h,L)*n_h/n_theta/2) ...
+                        + Re * n_ue * (n_hek * dcf_dret(n_Ret,n_h,L)/2 - 2*dcdiss_dret(n_Ret,n_hek,n_h, L)) ...
+                        + 2 * dcdiss_dh(n_Ret,n_hek,n_h,L) * n_h / n_theta ...
+                    ) ...
+                    + (1-kbias) /theta*((hek*(1-h))*(theta/ue)*ugrad - 2*cdiss(Ret, hek, h, L) ...
+                        + hek*cflam(Ret, h, L)/2);
 
-    % preallocation
-    J = zeros(2,2);
+        % derivative of momentum thickness equation wrt displacement thickness
+        J(2,2) = dhek_dh(n_h)/dxi ...
+                + kbias * ( ...
+                    + dhek_dh(n_h) * ((1-n_h)*n_ugrad/n_ue) - n_hek/n_ue*n_ugrad ...
+                    + ((dhek_dh(n_h)*cflam(n_Ret,n_h,L) + n_hek*dcf_dh(n_Ret,n_h,L))/2 ...
+                        - 2*(dcdiss_dhek(n_Ret,n_hek,n_h,L)*dhek_dh(n_h) + dcdiss_dh(n_Ret,n_hek,n_h,L)))/n_theta ...
+                );
 
-    % unpack input
-    n_theta = x(1); % theta_(n+1)
-    n_delta = x(2); % delta_(n+1)
-
-    % preprocessing: new auxiliary variables
-    n_Ret = Re * n_ue * n_theta; % Re_theta
-    n_h = n_delta/n_theta; % new h = d/theta
-    n_hek = hek_of_h(n_h); % new hek(h)
-
-    % preprocessing: old auxiliary variables
-    h = delta/theta; % old h
-    hek = hek_of_h(h); % old hek
-
-    % derivative of momentum thickness equation wrt momentum thickness
-    J(1,1) = 1/dxi + n_ugrad/n_ue - dcf_dret(n_Ret,n_h,L)*Re*n_ue/4 + dcf_dh(n_Ret,n_h,L)*n_h/n_theta/4;
-
-    % derivative of momentum thickness equation wrt displacement thickness
-    J(1,2) = n_ugrad/2/n_ue - dcf_dh(n_Ret,n_h,L)/4/n_theta;
-
-    % derivative of energy shape parameter eqn wrt momentum thickness
-    J(2,1) = (n_hek - hek)/dxi ...
-                + dhek_dh(n_h) * (2*dcdiss_dhek(n_Ret,n_hek,n_h, L)*n_h/n_Ret - n_h/dxi ...
-                                    - n_ugrad*n_h*(1-n_h)/n_ue - n_h*cflam(n_Ret,n_h,L)/2/n_theta) ...
-                + n_hek * (n_ugrad/n_ue - dcf_dh(n_Ret,n_h,L)*n_h/n_theta/2) ...
-                + Re * n_ue * (n_hek * dcf_dret(n_Ret,n_h,L)/2 - 2*dcdiss_dret(n_Ret,n_hek,n_h, L)) ...
-                + 2 * dcdiss_dh(n_Ret,n_hek,n_h,L) * n_h / n_theta;
-
-    % derivative of momentum thickness equation wrt displacement thickness
-    J(2,2) = dhek_dh(n_h) * (1/dxi + (1-n_h)*n_ugrad/n_ue) - n_hek/n_ue*n_ugrad ...
-                + ((dhek_dh(n_h)*cflam(n_Ret,n_h,L) + n_hek*dcf_dh(n_Ret,n_h,L))/2 ...
-                    - 2*(dcdiss_dhek(n_Ret,n_hek,n_h,L)*dhek_dh(n_h) + dcdiss_dh(n_Ret,n_hek,n_h,L)))/n_theta;
-
-end
-
+    
+    end
+    
 
 
 
