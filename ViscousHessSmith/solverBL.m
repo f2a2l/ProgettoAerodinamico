@@ -4,7 +4,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
 %for turbulent flow.
 
-    h_trans = 1.35;
     L = Re;
     Re_orig = Re;
     Re = 1;
@@ -38,11 +37,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         xtrans = varargin{1};
     end
 
-    % warning behaviour
-    showWarn = true;
-    if length(varargin) > 1
-        showWarn = varargin{2};
-    end
 
 
     %% define parameters
@@ -56,6 +50,8 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     warnOut = {};
     xi = getSwiseCoord(x, y); % get streamwise coordinate
     ugrad = gradVel(ue, xi); % get velocity gradient
+    ue_fun = @(xxx) interpFun(xi, ue, xxx);
+    ugrad_fun = @(xxx) interpFun(xi, ugrad, xxx);
 
 
 
@@ -65,7 +61,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     % initial conditions (main variables)
     theta = 0.29004 * sqrt(xi(2)/Re_orig /ue(2)) * L;
     delta = 2.23641 * theta; % derived starting from Eppler's cond. on hek
-    eta = 0;
 
     % initial conditions (auxiliary variables)
     h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
@@ -83,6 +78,22 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     % initialisation
     ii = 2; % counter for panels
     x_transition = x(end);
+
+    % try ode
+    % odefun = @(ttt, yyy) derivODE(ttt, yyy, L, Re, ue_fun, ugrad_fun);
+    % [xiout,yout] = ode15s(odefun,[xi(1) xi(end)],[theta; delta]);
+    % Cf = zeros(size(xiout));
+    % for ii = 1:length(yout)
+    %     theta = yout(ii,1);
+    %     h = yout(ii,2)/theta;
+    %     ue = ue_fun(xi);
+    %     Retheta = Re * ue * theta;
+    %     Cf(ii) = cflam(Retheta, h, L);
+    % end
+    % Cf = Cf/L;
+    % figure
+    % plot(xiout, Cf)
+    % keyboard
 
     % cycle over stations
     while eta < 9 && Retheta < Retmax
@@ -343,6 +354,33 @@ function y = stepLamIntBias(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad, 
                         + hek*cflam(Ret, h, L)/2);
     
 end
+
+function dy = derivODE(xi, y, L, Re, uefun, ugradfun)
+
+    dy = zeros(size(y)); % preallocation
+
+    % unpack input
+    theta = y(1); % theta_(n+1)
+    delta = y(2); % delta_(n+1)
+
+    % get ue, ugrad
+    ue = uefun(xi);
+    ugrad = ugradfun(xi);
+
+    % auxiliary variables
+    Ret = Re * ue * theta; % Re_theta
+    h = delta/theta; % h = d/theta
+    hek = hek_of_h(h); % hek(h)
+
+    % momentum thickness derivative from momentum thickness equation
+    dy(1) = cflam(Ret,h,L)/2 - (2+h)*(theta/ue)*ugrad;
+
+    % displacement thickness derivative from energy shape parameter equation
+    dy(2) = h*dy(1) ...
+            + (2*cdiss(Ret,hek,h,L) - hek*cflam(Ret,h,L)/2 - hek*(1-h)*(theta/ue)*ugrad)/dhek_dh(h);
+
+end
+
 
 
 
