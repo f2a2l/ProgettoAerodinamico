@@ -1,4 +1,6 @@
-function  [x,ii] = autoLevenMarq(f, x0, lambda, TOLL, MAXITER, varargin)
+function  [x,ii,errit] = autoLevenMarq(f, x0, lambda, TOLL, MAXITER, varargin)
+
+    errit = [];
 
     if ~isempty(varargin)
         outerIter = varargin{1};
@@ -22,6 +24,7 @@ function  [x,ii] = autoLevenMarq(f, x0, lambda, TOLL, MAXITER, varargin)
         ii = ii + 1;
         if ii > MAXITER
             warning(['maximum local iterations number reached at global iteration ' int2str(outerIter) '; algorithm did not converge.'])
+            errit = [errit outerIter];
             break
         end
 

@@ -60,10 +60,9 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     
     % initial conditions (main variables)
     theta = 0.29004 * sqrt(xi(2)/Re_orig /ue(2)) * L;
-    delta = 2.23641 * theta; % derived starting from Eppler's cond. on hek
+    h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
 
     % initial conditions (auxiliary variables)
-    h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
     Retheta = Re * ue(2) * theta;
 
     % trial for initial conditions on eta
@@ -92,29 +91,25 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         end
 
         % integration of bl
-        guess_y = [theta; delta];
+        guess_y = [theta; h];
         dxi = xi(ii) - xi(ii-1);
 
-        f = @(n_y) implicitDiffEqn(xi(ii), n_y, [(n_y(1)-guess_y(1))/dxi, (n_y(2)-guess_y(2))/dxi], L, Re, ue_fun, ugrad_fun);
-        % yy = fsolve(f, guess_y);
-        yy = autoLevenMarq(f, guess_y, 10, 1e-6, 1e4, ii);
-
-        % LEVENBERG MARQUARDT
-        % minthick = min(abs(theta), abs(delta));
-        % TOL = min(1e-2, minthick) * 1e-4;
-        % kbias = 1;
-        % lambda_lq = 10; % 0 for Newton Raphson
-        % f = @(a) stepLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), kbias, L);
-        % J = @(a) jacobLamIntBias(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii), kbias, L);
-        % yy = levenMarq(f, J, guess_y, lambda_lq, TOL, 10000, ii);
+        f = @(n_y) implicitDiffEqn(xi(ii), xi(ii-1), n_y, guess_y, L, Re, ue_fun, ugrad_fun, 0.9);
+        % [yy, ~, xflag] = fsolve(f, guess_y);
+        % if xflag ~= 1
+        %     warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
+        % end
+        [yy, ~, errit] = autoLevenMarq(f, guess_y, 10, 1e-6, 1e4, ii);
+        if ~isempty(errit)
+            disp(['Errors at xi = ' num2str(xi(errit))])
+        end
 
         % integration of wave amplification
         eta = stepAmplInt(eta, dxi, theta, h, yy(1), yy(2));
 
         % update variables
         theta = yy(1);
-        delta = yy(2);
-        h = delta/theta;
+        h = yy(2);
         Retheta = Re * theta * ue(ii);
 
         % check transition
@@ -307,13 +302,13 @@ end
 
 
 
-function dy = lamDerivatives(xi, y, L, Re, uefun, ugradfun)
+function dy = lamRHS(xi, y, L, Re, uefun, ugradfun)
 
     dy = zeros(size(y)); % preallocation
 
     % unpack input
     theta = y(1); % theta_(n+1)
-    delta = y(2); % delta_(n+1)
+    h = y(2); % h_(n+1)
 
     % get ue, ugrad
     ue = uefun(xi);
@@ -321,48 +316,40 @@ function dy = lamDerivatives(xi, y, L, Re, uefun, ugradfun)
 
     % auxiliary variables
     Ret = Re * ue * theta; % Re_theta
-    h = delta/theta; % h = d/theta
     hek = hek_of_h(h); % hek(h)
 
     % momentum thickness derivative from momentum thickness equation
     dy(1) = cflam(Ret,h,L)/2 - (2+h)*(theta/ue)*ugrad;
 
     % displacement thickness derivative from energy shape parameter equation
-    dy(2) = h*dy(1) ...
-            + (2*cdiss(Ret,hek,h,L) - hek*cflam(Ret,h,L)/2 - hek*(1-h)*(theta/ue)*ugrad)/dhek_dh(h);
+    dy(2) = 2*cdiss(Ret,hek,h,L) - hek*cflam(Ret,h,L)/2 - hek*(1-h)*(theta/ue)*ugrad;
 
 end
 
 
 
-function f = implicitDiffEqn(xi, y, yp, L, Re, uefun, ugradfun)
+function f = implicitDiffEqn(xi, xi_o, y, y_o, L, Re, uefun, ugradfun, biask)
 
-    dy = zeros(size(y)); % preallocation
-    f = dy;
+    f = zeros(size(y)); % preallocation
 
     % unpack input
+    dxi = xi - xi_o;
     theta = y(1); % theta_(n+1)
-    delta = y(2); % delta_(n+1)
-    d_theta = yp(1);
-    d_delta = yp(2);
+    h = y(2); % h_(n+1)
+    theta_o = y_o(1);
+    h_o = y_o(2);
 
-    % get ue, ugrad
-    ue = uefun(xi);
-    ugrad = ugradfun(xi);
+    % calculate forward derivative
+    d_theta = (theta - theta_o) / dxi;
+    d_h = (h - h_o) / dxi;
 
-    % auxiliary variables
-    Ret = Re * ue * theta; % Re_theta
-    h = delta/theta; % h = d/theta
-    hek = hek_of_h(h); % hek(h)
+    % get rhs
+    rhs = lamRHS(xi, y, L, Re, uefun, ugradfun);
+    rhs_o = lamRHS(xi_o, y_o, L, Re, uefun, ugradfun);
 
-    % momentum thickness derivative from momentum thickness equation
-    dy(1) = cflam(Ret,h,L)/2 - (2+h)*(theta/ue)*ugrad;
-    f(1) = d_theta - dy(1);
-
-    % displacement thickness derivative from energy shape parameter equation
-    f(2) = dhek_dh(h)*(d_delta - h*d_theta) ...
-            - (2*cdiss(Ret,hek,h,L) - hek*cflam(Ret,h,L)/2 - hek*(1-h)*(theta/ue)*ugrad);
-
+    f(1) = d_theta - rhs(1)/2 - rhs_o(1)/2;
+    f(2) = (biask*theta*dhek_dh(h) + (1-biask)*theta_o*dhek_dh(h_o)) * d_h ...
+            - biask*rhs(2) - (1-biask)*rhs_o(2);
 end
 
 
@@ -405,9 +392,7 @@ end
 
 %% wave amplification integration step
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function n_eta = stepAmplInt(eta, dxi, theta, h, n_theta, n_delta)
-
-    n_h = n_delta/n_theta;
+function n_eta = stepAmplInt(eta, dxi, theta, h, n_theta, n_h)
 
     n_d_eta = detadre(n_h);
     [n_l, n_m] = lm(n_h);
