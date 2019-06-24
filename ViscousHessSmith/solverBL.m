@@ -59,8 +59,9 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % initial conditions (main variables)
-    theta = 0.29004 * sqrt(xi(2)/Re_orig /ue(2)) * L;
-    h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
+    theta = 0.29234 * sqrt(xi(2)/Re_orig /ue(2)) * L;
+    % delta = 0.64791 * sqrt(xi(2)/Re_orig /ue(2)) * L; % obtained from value above with Eppler's empirical h(hek)
+    h = 0.64791/0.29234;
 
     % initial conditions (auxiliary variables)
     Retheta = Re * ue(2) * theta;
@@ -95,14 +96,14 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         dxi = xi(ii) - xi(ii-1);
 
         f = @(n_y) implicitDiffEqn(xi(ii), xi(ii-1), n_y, guess_y, L, Re, ue_fun, ugrad_fun, 0.9);
-        % [yy, ~, xflag] = fsolve(f, guess_y);
-        % if xflag ~= 1
-        %     warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
-        % end
-        [yy, ~, errit] = autoLevenMarq(f, guess_y, 10, 1e-6, 1e4, ii);
-        if ~isempty(errit)
-            disp(['Errors at xi = ' num2str(xi(errit))])
+        [yy, ~, xflag] = fsolve(f, guess_y);
+        if xflag ~= 1
+            warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
         end
+        % [yy, ~, errit] = autoLevenMarq(f, guess_y, 10, 1e-6, 1e4, ii);
+        % if ~isempty(errit)
+        %     disp(['Errors at xi = ' num2str(xi(errit))])
+        % end
 
         % integration of wave amplification
         eta = stepAmplInt(eta, dxi, theta, h, yy(1), yy(2));
@@ -214,18 +215,19 @@ end
 %% energy shape parameter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function hs = hek_of_h(h)
-    if h < 4
-        hs = 1.515 + 0.076*((4-h)^2)/h;
+    if h < 4.35
+        hs = 0.0111*((h-4.35)^2)/(h+1) - 0.0278*((h-4.35)^3)/(h+1) ...
+                + 1.528 - 0.0002*((h-4.35)*h)^2;
     else
-        hs = 1.515 + 0.040*((h-4)^2)/h;
+        hs = 0.015*((h-4.35)^2)/h + 1.528;
     end
 end
 
 function dh = dhek_dh(h)
-    if h < 4
-        dh = 0.076*(1-(16/h^2));
+    if h < 4.35
+        dh = (111*(2*h - 87/10))/(10000*(h + 1)) - (h^2*(2*h - 87/10))/5000 - (417*(h - 87/20)^2)/(5000*(h + 1)) - (111*(h - 87/20)^2)/(10000*(h + 1)^2) + (139*(h - 87/20)^3)/(5000*(h + 1)^2) - (h*(h - 87/20)^2)/2500;
     else
-        dh = 0.040*(1-(16/h^2));
+        dh = (3*(2*h - 87/10))/(200*h) - (3*(h - 87/20)^2)/(200*h^2);
     end
 end
 
@@ -234,30 +236,12 @@ end
 %% local skin friction coefficient
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function cf = cflam(Ret, h, L)
-    if h < 7.4
-        lhs = -0.067 + 0.01977*((7.4-h)^2)/(h-1);
+    if h < 5.5
+        lhs = 0.0727*((5.5-h)^3)/(h+1) - 0.07;
     else
-        lhs = -0.067 + 0.022*(1 - 1.4/(h-6))^2;
+        lhs = 0.015*(1 - 1/(h-4.5))^2 - 0.07;
     end
-    cf = L * 2 * lhs /Ret;
-end
-
-function dcf = dcf_dret(Ret, h, L)
-    if h < 7.4
-        lhs = -0.067 + 0.01977*((7.4-h)^2)/(h-1);
-    else
-        lhs = -0.067 + 0.022*(1 - 1.4/(h-6))^2;
-    end
-    dcf = L * (-2)*lhs/Ret^2;
-end
-
-function dcf = dcf_dh(Ret, h, L)
-    if h < 7.4
-        lhs = 0.01977*((h^2 - 2*h - 39.96)/(h-1)^2);
-    else
-        lhs = 0.022*(2.8*h - 20.72)/(h-6)^3;
-    end
-    dcf = L * 2 * lhs /Ret;
+    cf = L * lhs/Ret;
 end
 
 
@@ -266,38 +250,12 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function cds = cdiss(Ret, hek, h, L)
     if h < 4
-        lhs = 0.207 + 0.00205 * (4-h)^(5.5);
+        D1 = 0.207 + 0.00205 * (4-h)^(5.5);
     else
-        lhs = 0.207 - 0.003 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
+        D1 = 0.207 - 0.0016 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
     end
-    cds = L * lhs * hek /2 /Ret;
-end
-
-function dcds = dcdiss_dret(Ret, hek, h, L)
-    if h < 4
-        lhs = 0.207 + 0.00205 * (4-h)^(5.5);
-    else
-        lhs = 0.207 - 0.003 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
-    end
-    dcds = L * (-lhs) * hek /2 /Ret^2;
-end
-
-function dcds = dcdiss_dhek(Ret, hek, h, L)
-    if h < 4
-        lhs = 0.207 + 0.00205 * (4-h)^(5.5);
-    else
-        lhs = 0.207 - 0.003 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
-    end
-    dcds = L * lhs /2 /Ret;
-end
-
-function dcds = dcdiss_dh(Ret, hek, h, L)
-    if h < 4
-        lhs = 0.00205 * (-5.5)*(4-h)^(4.5);
-    else
-        lhs = - 0.003 * (5000*h - 20000)/(h^2 - 8*h + 66)^2;
-    end
-    dcds = L * lhs * hek /2 /Ret;
+    D1 = 1/Ret;
+    cds = L *  (hek*D1/2);
 end
 
 
