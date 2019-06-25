@@ -102,8 +102,8 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
         % end
 
         % integration of wave amplification
-        lambda_o = pgRe(Re_orig, theta/L, ugrad(ii-1));
-        lambda_n = pgRe(Re_orig, yy(1)/L, ugrad(ii));
+        lambda_o = pgRe(h);
+        lambda_n = pgRe(yy(2));
         eta = stepAmplInt(eta, dxi, Retheta, h, theta, lambda_o, Re*yy(1)*ue(ii), yy(2), yy(1), lambda_n, Tu, L);
 
         % update variables
@@ -415,8 +415,7 @@ end
 
 function rhs = waRHS(Ret, h, theta, lambda, Tu, L)
     RetONSET = OnsetRet(lambda, Tu);
-    rhs = dn_dret(h)*dret_dx(h)*RFAC(Ret, h) + gturb(Ret, RetONSET)/(theta/L); % if not working, try and comment RFAC
-    % rhs = gturb(Ret, RetONSET)/(theta/L); % apparently Drela uses this term only
+    rhs = dn_dret(h)*dret_dx(h)*RFAC(Ret, h) + L*gturb(Ret, RetONSET)/(theta); % if not working, try and comment RFAC
 end
 
 function eta = stepAmplInt(eta_o, dxi, Ret_o, h_o, theta_o, lambda_o, Ret, h, theta, lambda, Tu, L)
