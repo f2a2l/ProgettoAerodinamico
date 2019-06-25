@@ -224,7 +224,7 @@ classdef solverVHS
                 xt = blt(1,:);
                 yt = blt(2,:);
                 ut = blt(3,:);
-                [warnOutT, x_transitionT, CfT] = solverBL(Re, xt, yt, ut, 0, false);
+                [warnOutT, x_transitionT, CfT] = solverBL(Re, xt, yt, ut);
                 disp(['Top transition at x = ' num2str(x_transitionT)])
 
                 % bottom
@@ -232,7 +232,7 @@ classdef solverVHS
                 xb = blb(1,:);
                 yb = blb(2,:);
                 ub = blb(3,:);
-                [warnOutB, x_transitionB, CfB] = solverBL(Re, xb, yb, ub, 0, false);
+                [warnOutB, x_transitionB, CfB] = solverBL(Re, xb, yb, ub);
                 disp(['Bottom transition at x = ' num2str(x_transitionB)])
 
                 xb = flip(xb);

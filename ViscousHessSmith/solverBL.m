@@ -1,14 +1,15 @@
-function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
+function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
 %solverBL - inspired by J. Moran's INTGRL; solves integral boundary layer equations
 %starting at a stagnation point.
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
 %for turbulent flow.
 
-    %% external turbulence parameter
+    %% external turbulence parameter (as a percentual)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % min: 0.027    --------------->    advised for Re >= 1e6
+    % for ncrit = 9: try Tu = 0.0702 (for lower ncrit, raise Tu a bit)
     % for Re = 1e5: try Tu = 0.827 (for best correlation w/ xfoil)
-    Tu = 0.027; % min: 0.027
+    Tu = 0.075; % [%]
 
     %% scaling
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -30,19 +31,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     end
     if length(x) ~= length(y)
         error('wrong input; ue does not match mesh dimension.')
-    end
-
-
-
-    %% load settings
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    % possibly fixed transition
-    if isempty(varargin) || varargin{1} == 0
-        fixedTrans = false;
-    else
-        fixedTrans = true;
-        xtrans = varargin{1};
     end
 
 
@@ -80,16 +68,14 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     % Ret0 = RethetaCrit(h);
     % deta0 = dn_dret(h);
     % eta = 9 - deta0 * (Ret0 - Retheta);
-    
-    % start stability check
-    Retmax = RethetaCrit(h);
 
     % initialisation
     ii = 2; % counter for panels
     x_transition = x(end);
+    fopts = optimset('Display','off'); % fsolve options
 
     % cycle over stations
-    while eta < -8.43 - 2.4*log(Tu/100)
+    while eta < -8.43 - 2.4*log(2.7*tanh(Tu/2.7)/100) 
 
         % calculate skin friction factor
         Cf(ii) = cflam(Retheta, h, L);
@@ -106,7 +92,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         dxi = xi(ii) - xi(ii-1);
 
         f = @(n_y) implicitDiffEqn(xi(ii), xi(ii-1), n_y, guess_y, L, Re, ue_fun, ugrad_fun, 0.9);
-        [yy, ~, xflag] = fsolve(f, guess_y);
+        [yy, ~, xflag] = fsolve(f, guess_y, fopts);
         if xflag ~= 1
             warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
         end
@@ -124,15 +110,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         theta = yy(1);
         h = yy(2);
         Retheta = Re * theta * ue(ii);
-
-        % check transition
-        if fixedTrans
-            if x(ii) > xtrans
-                break
-            end
-        else
-            Retmax = RethetaCrit(h);
-        end
 
     end
 
@@ -413,7 +390,7 @@ end
 
 function F = Flam(lambda, Tu)
     if lambda <= 0
-        F = 1 - (-12.986*lambda - 123.66*lambda^2 - 405.689*lambda^3)*exp(-(Tu/1.5)^1.5);
+        F = 1 - (-12.986*lambda - 123.66*lambda^2 - 405.689*lambda^3)*exp(-((Tu/1.5)^1.5));
     else
         F = 1 + 0.275*(1-exp(-35*lambda))*exp(-2*Tu);
     end
@@ -437,6 +414,7 @@ end
 function rhs = waRHS(Ret, h, theta, lambda, Tu, L)
     RetONSET = OnsetRet(lambda, Tu);
     rhs = dn_dret(h)*dret_dx(h)*RFAC(Ret, h) + gturb(Ret, RetONSET)/(theta/L); % if not working, try and comment RFAC
+    % rhs = gturb(Ret, RetONSET)/(theta/L); % apparently Drela uses this term only
 end
 
 function eta = stepAmplInt(eta_o, dxi, Ret_o, h_o, theta_o, lambda_o, Ret, h, theta, lambda, Tu, L)
