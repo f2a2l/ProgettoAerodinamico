@@ -242,7 +242,7 @@ function cds = cdiss(Ret, hek, h, L)
     else
         D1 = 0.207 - 0.0016 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
     end
-    D1 = 1/Ret;
+    D1 = D1/Ret;
     cds = L *  (hek*D1/2);
 end
 
@@ -396,12 +396,14 @@ function F = Flam(lambda, Tu)
     end
 end
 
-function lambda = pgRe(Re, theta, ugrad)
-    lambda = Re * theta^2 * ugrad;
+function lambda = pgRe(h)
+    lambda = 0.058*(h-4)^2/(h-1) - 0.068;
     if lambda < -0.1
         lambda = -0.1;
+        warning('bla') % FIXME: delete me
     elseif lambda > 0.1
         lambda = 0.1;
+        warning('bla') % FIXME: delete me
     end
 end
 
