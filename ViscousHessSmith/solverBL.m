@@ -4,6 +4,14 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
 %for turbulent flow.
 
+    %% external turbulence parameter
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % min: 0.027    --------------->    advised for Re >= 1e6
+    % for Re = 1e5: try Tu = 0.827 (for best correlation w/ xfoil)
+    Tu = 0.027; % min: 0.027
+
+    %% scaling
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     L = Re;
     Re_orig = Re;
     Re = 1;
@@ -47,6 +55,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     %% initialisation
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     Cf = zeros(1, nx);
+    N = Cf;
     warnOut = {};
     xi = getSwiseCoord(x, y); % get streamwise coordinate
     ugrad = gradVel(ue, xi); % get velocity gradient
@@ -62,28 +71,29 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     theta = 0.29234 * sqrt(xi(2)/Re_orig /ue(2)) * L;
     % delta = 0.64791 * sqrt(xi(2)/Re_orig /ue(2)) * L; % obtained from value above with Eppler's empirical h(hek)
     h = 0.64791/0.29234;
+    eta = 0;
 
     % initial conditions (auxiliary variables)
     Retheta = Re * ue(2) * theta;
 
     % trial for initial conditions on eta
-    Ret0 = RethetaCrit(h);
-    deta0 = detadre(h);
-    eta = 9 - deta0 * (Ret0 - Retheta);
+    % Ret0 = RethetaCrit(h);
+    % deta0 = dn_dret(h);
+    % eta = 9 - deta0 * (Ret0 - Retheta);
     
     % start stability check
-    Rex = Re_orig * xi(2) * ue(2);
-    Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
+    Retmax = RethetaCrit(h);
 
     % initialisation
     ii = 2; % counter for panels
     x_transition = x(end);
 
     % cycle over stations
-    while eta < 9 && Retheta < Retmax
+    while eta < -8.43 - 2.4*log(Tu/100)
 
         % calculate skin friction factor
         Cf(ii) = cflam(Retheta, h, L);
+        N(ii) = eta;
 
         % go on to next panel, check if such panel exists
         ii = ii + 1;
@@ -106,7 +116,9 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
         % end
 
         % integration of wave amplification
-        eta = stepAmplInt(eta, dxi, theta, h, yy(1), yy(2));
+        lambda_o = pgRe(Re_orig, theta/L, ugrad(ii-1));
+        lambda_n = pgRe(Re_orig, yy(1)/L, ugrad(ii));
+        eta = stepAmplInt(eta, dxi, Retheta, h, theta, lambda_o, Re*yy(1)*ue(ii), yy(2), yy(1), lambda_n, Tu, L);
 
         % update variables
         theta = yy(1);
@@ -119,8 +131,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
                 break
             end
         else
-            Rex = Re_orig * xi(ii) * ue(ii);
-            Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
+            Retmax = RethetaCrit(h);
         end
 
     end
@@ -322,45 +333,119 @@ end
 
 
 
-%% l and m
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [l, m] = lm(h)
-    l = (6.54*h - 14.07)/h^2;
-    m = (0.058*((h-4)^2)/(h-1) - 0.068)/l;
-end
-
-
-
 %% derivative of eta with respect to Re theta
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function diff = detadre(h)
-    diff = 0.01*sqrt(((2.4*h - 3.7 + 2.5*tanh(1.5*h-4.65))^2)+0.25);
+function deriv = dn_dret(h)
+    deriv = 0.028*(h-1) - 0.0345*exp(-(3.87/(h-1)-2.52)^2);
 end
 
 
 
-%% critical Re theta (possilby deprecated)
+%% derivative of Retheta with respect to streamwise coordinate
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function deriv = dret_dx(h)
+    deriv = -0.05 + 2.7/(h-1) - 5.5/(h-1)^2 + 3/(h-1)^3;
+end
+
+
+
+%% critical Re theta
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function ret0 = RethetaCrit(h)
-    lhs = (1.415/(h-1)-0.489)*tanh(20/(h-1)-12.9) + 3.295/(h-1) + 0.44;
-    ret0 = 10^lhs;
+    lg10 = (0.267659/(h-1) + 0.394429) * tanh(12.7886/(h-1) - 8.57463) + 3.04212/(h-1) + 0.6660931;
+    ret0 = 10^lg10;
 end
 
 
 
-%% wave amplification integration step
+%% numerical smoothness correction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function n_eta = stepAmplInt(eta, dxi, theta, h, n_theta, n_h)
 
-    n_d_eta = detadre(n_h);
-    [n_l, n_m] = lm(n_h);
+function rnorm = RNORM(Ret, h)
+    p = 0.08;
+    RetCRIT = RethetaCrit(h);
+    rnorm = (log10(Ret) - (log10(RetCRIT) - p))/(2*p);
+end
 
-    d_eta = detadre(h);
-    [l, m] = lm(h);
+function rfac = RFAC(Ret, h)
+    rnorm = RNORM(Ret, h);
+    if rnorm <=0
+        rfac = 0;
+    elseif rnorm < 1
+        rfac = 3*rnorm^2 - 2*rnorm^3;
+    else
+        rfac = 1;
+    end
+end
 
-    n_eta = eta + dxi*( ...
-                n_d_eta * (n_m+1)/4 * n_l/n_theta ...
-                + d_eta * (  m+1)/4 *   l/  theta ...
-            );
+
+
+%% correction for turbulence in freestream
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function g = gturb(Ret, RetONSET)
+    A = 0.1;
+    B = 0.3;
+    r = (Ret/RetONSET - 1)/B + 0.5;
+    if r <= 0
+        g = 0;
+    elseif r < 1
+        g = A*(3*r^2 - 2*r^3);
+    else
+        g = A;
+    end
+end
+
+
+
+%% Retheta onset
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function re = OnsetRet(lambda, Tu)
+    if Tu <= 1.3
+        re = (1173.51 - 589.428*Tu + 0.2196/Tu^2)*Flam(lambda, Tu);
+    else
+        re = 331.5*(Tu - 0.5658)^(-0.671)*Flam(lambda, Tu);
+    end
+    if re < 20
+        re = 20;
+    end
+end
+
+function F = Flam(lambda, Tu)
+    if lambda <= 0
+        F = 1 - (-12.986*lambda - 123.66*lambda^2 - 405.689*lambda^3)*exp(-(Tu/1.5)^1.5);
+    else
+        F = 1 + 0.275*(1-exp(-35*lambda))*exp(-2*Tu);
+    end
+end
+
+function lambda = pgRe(Re, theta, ugrad)
+    lambda = Re * theta^2 * ugrad;
+    if lambda < -0.1
+        lambda = -0.1;
+    elseif lambda > 0.1
+        lambda = 0.1;
+    end
+end
+
+
+
+
+%% wave amplification derivative and integration step
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function rhs = waRHS(Ret, h, theta, lambda, Tu, L)
+    RetONSET = OnsetRet(lambda, Tu);
+    rhs = dn_dret(h)*dret_dx(h)*RFAC(Ret, h) + gturb(Ret, RetONSET)/(theta/L); % if not working, try and comment RFAC
+end
+
+function eta = stepAmplInt(eta_o, dxi, Ret_o, h_o, theta_o, lambda_o, Ret, h, theta, lambda, Tu, L)
+
+    rhs = waRHS(Ret, h, theta, lambda, Tu, L);
+    rhs_o = waRHS(Ret_o, h_o, theta_o, lambda_o, Tu, L);
+
+    the_real_rhs = rhs/2 + rhs_o/2;
+
+    eta = eta_o + dxi*the_real_rhs;
 
 end
