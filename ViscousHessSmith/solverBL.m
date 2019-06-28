@@ -4,6 +4,8 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
 %for turbulent flow.
 
+
+
     %% external turbulence parameter (as a percentual)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % min: 0.027    --------------->    advised for Re >= 1e6
@@ -11,12 +13,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
     % for Re = 1e5: try Tu = 0.827 (for best correlation w/ xfoil)
     Tu = 0.075; % [%]
 
-    %% scaling
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    L = Re;
-    Re_orig = Re;
-    Re = 1;
-    Re = Re*1e0;
+
 
     %% input check
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -56,8 +53,8 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % initial conditions (main variables)
-    theta = 0.29234 * sqrt(xi(2)/Re_orig /ue(2)) * L;
-    % delta = 0.64791 * sqrt(xi(2)/Re_orig /ue(2)) * L; % obtained from value above with Eppler's empirical h(hek)
+    theta = 0.29234 * sqrt(xi(2)/Re /ue(2));
+    % delta = 0.64791 * sqrt(xi(2)/Re /ue(2)); % obtained from value above with Eppler's empirical h(hek)
     h = 0.64791/0.29234;
     eta = 0;
 
@@ -78,7 +75,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
     while eta < -8.43 - 2.4*log(2.7*tanh(Tu/2.7)/100) 
 
         % calculate skin friction factor
-        Cf(ii) = cflam(Retheta, h, L);
+        Cf(ii) = cflam(Retheta, h);
         N(ii) = eta;
 
         % go on to next panel, check if such panel exists
@@ -91,7 +88,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
         guess_y = [theta; h];
         dxi = xi(ii) - xi(ii-1);
 
-        f = @(n_y) implicitDiffEqn(xi(ii), xi(ii-1), n_y, guess_y, L, Re, ue_fun, ugrad_fun, 0.9);
+        f = @(n_y) implicitDiffEqn(xi(ii), xi(ii-1), n_y, guess_y, Re, ue_fun, ugrad_fun, 0.9);
         [yy, ~, xflag] = fsolve(f, guess_y, fopts);
         if xflag ~= 1
             warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
@@ -104,7 +101,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
         % integration of wave amplification
         lambda_o = pgRe(h);
         lambda_n = pgRe(yy(2));
-        eta = stepAmplInt(eta, dxi, Retheta, h, theta, lambda_o, Re*yy(1)*ue(ii), yy(2), yy(1), lambda_n, Tu, L);
+        eta = stepAmplInt(eta, dxi, Retheta, h, theta, lambda_o, Re*yy(1)*ue(ii), yy(2), yy(1), lambda_n, Tu);
 
         % update variables
         theta = yy(1);
@@ -115,7 +112,6 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
 
     % save data
     x_transition = x(ii);
-    Cf = Cf/L;
 
 
 
@@ -124,7 +120,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
 
     while ii <= nx
 
-        Rex = Re_orig * xi(ii) * ue(ii);
+        Rex = Re * xi(ii) * ue(ii);
         Cf(ii) = 0.059 * Rex^(-0.2);
 
         % update counter
@@ -223,32 +219,32 @@ end
 
 %% local skin friction coefficient
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function cf = cflam(Ret, h, L)
+function cf = cflam(Ret, h)
     if h < 5.5
         lhs = 0.0727*((5.5-h)^3)/(h+1) - 0.07;
     else
         lhs = 0.015*(1 - 1/(h-4.5))^2 - 0.07;
     end
-    cf = L * lhs/Ret;
+    cf = lhs/Ret;
 end
 
 
 
 %% local dissipation coefficient
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function cds = cdiss(Ret, hek, h, L)
+function cds = cdiss(Ret, hek, h)
     if h < 4
         D1 = 0.207 + 0.00205 * (4-h)^(5.5);
     else
         D1 = 0.207 - 0.0016 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
     end
     D1 = D1/Ret;
-    cds = L *  (hek*D1/2);
+    cds = (hek*D1/2);
 end
 
 
 
-function dy = lamRHS(xi, y, L, Re, uefun, ugradfun)
+function dy = lamRHS(xi, y, Re, uefun, ugradfun)
 
     dy = zeros(size(y)); % preallocation
 
@@ -265,16 +261,16 @@ function dy = lamRHS(xi, y, L, Re, uefun, ugradfun)
     hek = hek_of_h(h); % hek(h)
 
     % momentum thickness derivative from momentum thickness equation
-    dy(1) = cflam(Ret,h,L)/2 - (2+h)*(theta/ue)*ugrad;
+    dy(1) = cflam(Ret,h)/2 - (2+h)*(theta/ue)*ugrad;
 
     % displacement thickness derivative from energy shape parameter equation
-    dy(2) = 2*cdiss(Ret,hek,h,L) - hek*cflam(Ret,h,L)/2 - hek*(1-h)*(theta/ue)*ugrad;
+    dy(2) = 2*cdiss(Ret,hek,h) - hek*cflam(Ret,h)/2 - hek*(1-h)*(theta/ue)*ugrad;
 
 end
 
 
 
-function f = implicitDiffEqn(xi, xi_o, y, y_o, L, Re, uefun, ugradfun, biask)
+function f = implicitDiffEqn(xi, xi_o, y, y_o, Re, uefun, ugradfun, biask)
 
     f = zeros(size(y)); % preallocation
 
@@ -284,18 +280,20 @@ function f = implicitDiffEqn(xi, xi_o, y, y_o, L, Re, uefun, ugradfun, biask)
     h = y(2); % h_(n+1)
     theta_o = y_o(1);
     h_o = y_o(2);
+    hek_o = hek_of_h(h_o);
 
     % calculate forward derivative
     d_theta = (theta - theta_o) / dxi;
     d_h = (h - h_o) / dxi;
 
     % get rhs
-    rhs = lamRHS(xi, y, L, Re, uefun, ugradfun);
-    rhs_o = lamRHS(xi_o, y_o, L, Re, uefun, ugradfun);
+    rhs = lamRHS(xi, y, Re, uefun, ugradfun);
+    rhs_o = lamRHS(xi_o, y_o, Re, uefun, ugradfun);
 
     f(1) = d_theta - rhs(1)/2 - rhs_o(1)/2;
     f(2) = (biask*theta*dhek_dh(h) + (1-biask)*theta_o*dhek_dh(h_o)) * d_h ...
             - biask*rhs(2) - (1-biask)*rhs_o(2);
+
 end
 
 
@@ -413,15 +411,15 @@ end
 %% wave amplification derivative and integration step
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function rhs = waRHS(Ret, h, theta, lambda, Tu, L)
+function rhs = waRHS(Ret, h, theta, lambda, Tu)
     RetONSET = OnsetRet(lambda, Tu);
-    rhs = dn_dret(h)*dret_dx(h)*RFAC(Ret, h) + L*gturb(Ret, RetONSET)/(theta); % if not working, try and comment RFAC
+    rhs = dn_dret(h)*dret_dx(h)*RFAC(Ret, h) + gturb(Ret, RetONSET)/(theta); % if not working, try and comment RFAC
 end
 
-function eta = stepAmplInt(eta_o, dxi, Ret_o, h_o, theta_o, lambda_o, Ret, h, theta, lambda, Tu, L)
+function eta = stepAmplInt(eta_o, dxi, Ret_o, h_o, theta_o, lambda_o, Ret, h, theta, lambda, Tu)
 
-    rhs = waRHS(Ret, h, theta, lambda, Tu, L);
-    rhs_o = waRHS(Ret_o, h_o, theta_o, lambda_o, Tu, L);
+    rhs = waRHS(Ret, h, theta, lambda, Tu);
+    rhs_o = waRHS(Ret_o, h_o, theta_o, lambda_o, Tu);
 
     the_real_rhs = rhs/2 + rhs_o/2;
 
