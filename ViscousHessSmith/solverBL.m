@@ -40,12 +40,13 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
     %% initialisation
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     Cf = zeros(1, nx);
+    h_save = Cf;
+    theta_save = Cf;
     N = Cf;
     warnOut = {};
     xi = getSwiseCoord(x, y); % get streamwise coordinate
-    ugrad = gradVel(ue, xi); % get velocity gradient
-    ue_fun = @(xxx) interpFun(xi, ue, xxx);
-    ugrad_fun = @(xxx) interpFun(xi, ugrad, xxx);
+    luegrad = gradVel(ue, xi); % get velocity gradient
+    luegrad_fun = @(xxx) interpFun(xi, luegrad, xxx);
 
 
 
@@ -77,10 +78,13 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
         % calculate skin friction factor
         Cf(ii) = cflam(Retheta, h);
         N(ii) = eta;
+        h_save(ii) = h;
+        theta_save(ii) = theta;
 
         % go on to next panel, check if such panel exists
         ii = ii + 1;
         if ii > nx
+            plot(xi, h_save); % FIXME: debug
             return
         end
 
@@ -88,7 +92,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
         guess_y = [theta; h];
         dxi = xi(ii) - xi(ii-1);
 
-        f = @(n_y) implicitDiffEqn(xi(ii), xi(ii-1), n_y, guess_y, Re, ue_fun, ugrad_fun, 0.9);
+        f = @(n_y) implicitDiffEqn(xi(ii), xi(ii-1), n_y, guess_y, ue(ii), ue(ii-1), Re, luegrad_fun, 0.9);
         [yy, ~, xflag] = fsolve(f, guess_y, fopts);
         if xflag ~= 1
             warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
@@ -112,6 +116,7 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue)
 
     % save data
     x_transition = x(ii);
+    plot(xi, h_save); % FIXME: debug
 
 
 
@@ -174,12 +179,12 @@ function ugrad = gradVel(ue, xi)
     ugrad = zeros(size(ue));
 
     % first and last step: forward/backward differences (I order)
-    ugrad(1) = (ue(2) - ue(1))/(xi(2)-xi(1));
-    ugrad(end) = (ue(end) - ue(end-1))/(xi(end) - xi(end-1));
+    ugrad(1) = log(ue(2)/ue(1)) / log(xi(2)/xi(1));
+    ugrad(end) = log(ue(end)/ue(end-1)) / log(xi(end)/xi(end-1));
 
     % all other steps: centered differences (II order)
     for ii = 2:(length(ue)-1)
-        ugrad(ii) = (ue(ii+1) - ue(ii-1))/(xi(ii+1) - xi(ii-1));
+        ugrad(ii) = log(ue(ii+1)/ue(ii-1)) / log(xi(ii+1)/xi(ii-1));
     end
 
 end
@@ -244,7 +249,7 @@ end
 
 
 
-function dy = lamRHS(xi, y, Re, uefun, ugradfun)
+function dy = lamRHS(xi, y, Re, ue, luegrad_fun)
 
     dy = zeros(size(y)); % preallocation
 
@@ -252,47 +257,50 @@ function dy = lamRHS(xi, y, Re, uefun, ugradfun)
     theta = y(1); % theta_(n+1)
     h = y(2); % h_(n+1)
 
-    % get ue, ugrad
-    ue = uefun(xi);
-    ugrad = ugradfun(xi);
-
     % auxiliary variables
     Ret = Re * ue * theta; % Re_theta
     hek = hek_of_h(h); % hek(h)
 
+    luegrad = luegrad_fun(xi);
+
     % momentum thickness derivative from momentum thickness equation
-    dy(1) = cflam(Ret,h)/2 - (2+h)*(theta/ue)*ugrad;
+    dy(1) = (xi/theta)*(cflam(Ret,h)/2) - (2+h)*luegrad;
 
     % displacement thickness derivative from energy shape parameter equation
-    dy(2) = 2*cdiss(Ret,hek,h) - hek*cflam(Ret,h)/2 - hek*(1-h)*(theta/ue)*ugrad;
+    dy(2) = (xi/theta)*(2*cdiss(Ret,hek,h)/hek - cflam(Ret,h)/2) - (1-h)*luegrad;
 
 end
 
 
 
-function f = implicitDiffEqn(xi, xi_o, y, y_o, Re, uefun, ugradfun, biask)
+function f = implicitDiffEqn(xi, xi_o, y, y_o, ue, ue_o, Re, luegrad_fun, biask)
 
     f = zeros(size(y)); % preallocation
 
     % unpack input
-    dxi = xi - xi_o;
+    dlxi = log(xi/xi_o);
     theta = y(1); % theta_(n+1)
     h = y(2); % h_(n+1)
     theta_o = y_o(1);
     h_o = y_o(2);
+
+    % auxiliary variables
+    hek = hek_of_h(h);
     hek_o = hek_of_h(h_o);
 
     % calculate forward derivative
-    d_theta = (theta - theta_o) / dxi;
-    d_h = (h - h_o) / dxi;
+    dl_theta = log(theta/theta_o) / dlxi;
+    dl_hek = log(hek/hek_o) / dlxi;
 
     % get rhs
-    rhs = lamRHS(xi, y, Re, uefun, ugradfun);
-    rhs_o = lamRHS(xi_o, y_o, Re, uefun, ugradfun);
+    rhs = lamRHS(xi, y, Re, ue, luegrad_fun);
+    rhs_o = lamRHS(xi_o, y_o, Re, ue_o, luegrad_fun);
 
-    f(1) = d_theta - rhs(1)/2 - rhs_o(1)/2;
-    f(2) = (biask*theta*dhek_dh(h) + (1-biask)*theta_o*dhek_dh(h_o)) * d_h ...
-            - biask*rhs(2) - (1-biask)*rhs_o(2);
+    % f(1) = dl_theta - rhs(1)/2 - rhs_o(1)/2;
+    f(1) = dl_theta - rhs(1);
+    f(2) = dl_hek - rhs(2);
+    % f(2) = dl_hek ...
+    %        - biask*rhs(2) - (1-biask)*rhs_o(2);
 
 end
 
