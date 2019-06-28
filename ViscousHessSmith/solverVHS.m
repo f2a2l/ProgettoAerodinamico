@@ -224,7 +224,7 @@ classdef solverVHS
                 xt = blt(1,:);
                 yt = blt(2,:);
                 ut = blt(3,:);
-                [warnOutT, x_transitionT, CfT] = solverBL(Re, xt, yt, ut);
+                [x_transitionT, CfT] = solverBL(Re, xt, yt, ut);
                 disp(['Top transition at x = ' num2str(x_transitionT)])
 
                 % bottom
@@ -232,7 +232,7 @@ classdef solverVHS
                 xb = blb(1,:);
                 yb = blb(2,:);
                 ub = blb(3,:);
-                [warnOutB, x_transitionB, CfB] = solverBL(Re, xb, yb, ub);
+                [x_transitionB, CfB] = solverBL(Re, xb, yb, ub);
                 disp(['Bottom transition at x = ' num2str(x_transitionB)])
 
                 xb = flip(xb);
@@ -250,13 +250,6 @@ classdef solverVHS
                 end
 
                 Cf{k} = [CfB CfT];
-
-                for ii = 1:length(warnOutT)
-                    disp(warnOutT{ii})
-                end
-                for ii = 1:length(warnOutB)
-                    disp(warnOutB{ii})
-                end
 
                 if obj.nArfls == 1
                     Cdvisc = LoadsVisc(obj.panels, Cf{k}, obj.alpha);
