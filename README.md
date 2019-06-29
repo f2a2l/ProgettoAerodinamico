@@ -24,7 +24,7 @@ Profilo singolo:
 
 ```MATLAB
 arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
-problem = solverVHS(80, arflPar, 3);
+problem = solverVHS(200, arflPar, 3);
 problem.maxdCp % massimo dCp per Valarezo
 problem.plotCp();
 problem.plotUe();
@@ -38,7 +38,7 @@ Multi profilo:
 ```MATLAB
 arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5;
            0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
-problem = solverVHS(80, arflPar, [3, 6], [-0.05, -0.05], 0.3);
+problem = solverVHS(200, arflPar, [3, 6], [-0.05, -0.05], 0.3);
 problem.maxdCp % massimo dCp su ogni profilo per Valarezo
 problem.plotCp();
 problem.plotUe();
