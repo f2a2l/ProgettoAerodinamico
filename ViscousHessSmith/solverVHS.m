@@ -180,7 +180,7 @@ classdef solverVHS
                 figure('Name', figName)
                 plot(obj.xpanc{k}, obj.Cp{k}, '--', 'LineWidth',1.5, 'Color',[0, 0, 0.1])
                 xlabel('x/c')
-                ylabel('Cp')
+                ylabel('C_P')
                 set(gca,'Ydir','reverse')
                 title(figTitle)
                 grid on
@@ -196,9 +196,9 @@ classdef solverVHS
                 figName = ['ue - airfoil ' int2str(k)];
                 figTitle = ['Airfoil ' int2str(k)];
                 figure('Name', figName)
-                plot(obj.xpanc{k}, obj.ue{k}, '--', 'LineWidth',1.5, 'Color',[0, 0, 0.1])
+                plot(obj.xpanc{k}, abs(obj.ue{k}), '--', 'LineWidth',1.5, 'Color',[0, 0, 0.1])
                 xlabel('x/c')
-                ylabel('ue/U')
+                ylabel('u_e /U')
                 title(figTitle)
                 grid on
             end
@@ -244,9 +244,16 @@ classdef solverVHS
                     figure('Name', figName)
                     hold on
                     grid on
+                    ttl = ['Airfoil ' int2str(k) newline 'Top transition at x = ' num2str(x_transitionT) newline 'Bottom transition at x = ' num2str(x_transitionB)];
+                    title(ttl)
                     plot(xb, CfB, 'red', 'LineWidth',1.5)
                     plot(xt, CfT, 'blue', 'LineWidth',1.5)
                     legend({'bottom' 'top'})
+                    axlim = axis();
+                    axlim(2) = 1;
+                    axis(axlim);
+                    ylabel('C_f')
+                    xlabel('x')
                 end
 
                 Cf{k} = [CfB CfT];

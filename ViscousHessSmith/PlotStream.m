@@ -33,7 +33,7 @@ function plotStream(AirfNumb, p, x, y, metaPan, alpha, SOL, Cl, Cd, showNodes)
             strCd = [strCd '   '];
         end
     
-        title([newline 'CL (left to right):   ' strCl newline 'CD (left to right):   ' strCd newline newline])
+        title([newline 'CL (left to right):   ' strCl newline])
     
     end
 
