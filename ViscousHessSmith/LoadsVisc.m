@@ -8,9 +8,7 @@ CFy = 0;
 
 for i = 1:n-1
     
-    dx = abs(p.panel(i).P2.x - p.panel(i).P1.x);
-    dy = abs(p.panel(i).P2.y - p.panel(i).P1.y);
-    
+    dx = abs(p.panel(i).P2.x - p.panel(i).P1.x);    
     CFx = CFx + Cf(i)*dx;
 
 end
