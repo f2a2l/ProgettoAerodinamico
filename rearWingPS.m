@@ -10,7 +10,7 @@ addPaths;
 %% Optimization
 optiPAR_v5; %as output: lb and ub. Here it is possibile to define boundaries for optimization
 
-fun = @lapTime_objFun_DEFINITIVA;
+fun = @lapTime_objFun;
 nvars = 21;
 
 %Starts ParallelPool for Parallel Computation
