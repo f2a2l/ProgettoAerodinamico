@@ -50,8 +50,8 @@ min_x = -0.1;%default = -0.02;
 max_x = -0.05; % default = 0.016;
 step_x = 0.01;
 
-min_y = -0.03;
-max_y = -0.02;
+min_y = -0.1;
+max_y = -0.02;%-0.015
 step_y = 0.01;
 
 %% Flap Chord - (fraction of main airfoil chord, namely c = 1)
@@ -104,12 +104,12 @@ c_flap = [min_c_flap:step_c_flap:max_c_flap];
 
 %% To optimization Solver
 lb = [min_c1(1),min_c2(1),min_c3(1),min_c4(1),min_x_t(1),min_T(1),min_rho(1),min_beta_TE(1),...
-       min_c1(2),min_c2(2),min_c3(2),min_c4(2),min_x_t(2),min_T(2),min_rho(2),min_beta_TE(2),... 
+       min_c1(2),min_c2(2),min_c3(2),min_c4(2),min_x_t(2),min_T(2),min_rho(2),min_beta_TE(2),...
        min_AoA(1),min_AoA(2),...
        min_x,min_y,min_c_flap];
 ub = [max_c1(1),max_c2(1),max_c3(1),max_c4(1),max_x_t(1),max_T(1),max_rho(1),max_beta_TE(1),...
-       max_c1(2),max_c2(2),max_c3(2),max_c4(2),max_x_t(2),max_T(2),max_rho(2),max_beta_TE(2),... 
+       max_c1(2),max_c2(2),max_c3(2),max_c4(2),max_x_t(2),max_T(2),max_rho(2),max_beta_TE(2),...
        max_AoA(1),max_AoA(2),...
        max_x,max_y,max_c_flap];
-  
+
 clearvars -except lb ub

@@ -29,3 +29,4 @@ options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter',...
 
 %% Generate .dat file for CFD Meshing
 geometryCFD;
+saveProfiles;
