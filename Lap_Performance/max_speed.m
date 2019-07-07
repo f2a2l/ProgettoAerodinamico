@@ -10,7 +10,7 @@ function [u_max]=max_speed(CD,fig)
 
 
 % source: WIKIPEDIA Ferrari SF90
-max_CV = 400; %500; %990;                  % [Hp] maximum horse power
+max_CV = 990; %400; %500;                  % [Hp] maximum horse power
 max_power = max_CV/1.36*1000;  % [kW]
 
 % General inputs
