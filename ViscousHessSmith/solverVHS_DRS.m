@@ -3,16 +3,16 @@ classdef solverVHS_DRS
     %   Uses a Hess-Smith method for external flow; boundary layer is
     %   accounted for with an integral equation with Thwaites' closure
     %   (laminar flow) or Head's (turbulent).
-    
+
     properties
 
         nArfls
         alpha
-        
+
         inviscidCL
         inviscidCD
         inviscidCFs
-        
+
         x
         y
         xpanc
@@ -34,7 +34,7 @@ classdef solverVHS_DRS
         bl
 
     end
-    
+
     methods
 
 
@@ -57,7 +57,7 @@ classdef solverVHS_DRS
             for k = nairfoils
                 v{k} = v{k};
             end
-                        
+
             obj.nArfls = nairfoils;
             obj.alpha = alpha;
 
@@ -132,11 +132,11 @@ classdef solverVHS_DRS
 
                 vtop = u(idx:end);
                 xtop = xp(idx:end);
-                ytop = yp(idx:end);                
+                ytop = yp(idx:end);
 
                 bldata{k,1} = [xtop'; ytop'; vtop'];
                 bldata{k,2} = [xbot'; ybot'; vbot'];
-                
+
             end
 
             obj.bl = bldata;
@@ -146,7 +146,7 @@ classdef solverVHS_DRS
         end
 
 
-        
+
         function plotStreamlines(obj,varargin)
             %plotStreamlines Plots streamlines of inviscid solution.
 
@@ -224,7 +224,7 @@ classdef solverVHS_DRS
                 xt = blt(1,:);
                 yt = blt(2,:);
                 ut = blt(3,:);
-                [warnOutT, x_transitionT, CfT] = solverBL(Re, xt, yt, ut, 0, false);
+                [x_transitionT, CfT] = solverBL(Re, xt, yt, ut);
                 disp(['Top transition at x = ' num2str(x_transitionT)])
 
                 % bottom
@@ -232,7 +232,7 @@ classdef solverVHS_DRS
                 xb = blb(1,:);
                 yb = blb(2,:);
                 ub = blb(3,:);
-                [warnOutB, x_transitionB, CfB] = solverBL(Re, xb, yb, ub, 0, false);
+                [x_transitionB, CfB] = solverBL(Re, xb, yb, ub);
                 disp(['Bottom transition at x = ' num2str(x_transitionB)])
 
                 xb = flip(xb);
@@ -251,19 +251,12 @@ classdef solverVHS_DRS
 
                 Cf{k} = [CfB CfT];
 
-                for ii = 1:length(warnOutT)
-                    disp(warnOutT{ii})
-                end
-                for ii = 1:length(warnOutB)
-                    disp(warnOutB{ii})
-                end
-
                 if obj.nArfls == 1
                     Cdvisc = LoadsVisc(obj.panels, Cf{k}, obj.alpha);
                 else
-                    Cdvisc(k) = LoadsVisc(obj.p1(k), Cf{k}, obj.alpha(k));    
+                    Cdvisc(k) = LoadsVisc(obj.p1(k), Cf{k}, obj.alpha(k));
                 end
-            
+
             end
 
             Cl_s = obj.inviscidCFs{1};
@@ -276,4 +269,3 @@ classdef solverVHS_DRS
 
     end
 end
-

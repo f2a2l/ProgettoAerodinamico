@@ -45,9 +45,17 @@ tic;
 				c1_flap,c2_flap,c3_flap,c4_flap,x_t_flap,T_flap,rho_flap,beta_TE_flap];
     
     
-    %% Hess-Smith Calculation
     n_points = 80;
     
+    %% Check Slot Size
+    
+    [x, y] = multiGeometry(n_points,arflPar,[AoA_main AoA_flap], [x_flap y_flap], c_flap);
+    
+    mind = getMinDist(x{1}, y{1}, x{2}, y{2});
+    
+    if mind < 0.02
+    
+    %% Hess-Smith Calculation
     %[Cl,Cd,totLength,~,~,~,~,~,~,~] = solverHS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap);
     %[Cl_DRS,Cd_DRS,totLength,~,~,~,~,~,~,~] = solverHS_DRS(n_points,arflPar,[AoA_main AoA_flap],[x_flap y_flap],c_flap);
     %keyboard
@@ -73,10 +81,10 @@ tic;
     %keyboard
     %% XFOIL correction
     %TODO
-    
+    %keyboard
     %% Check Quality of results
     %if min(min(min(Cl,Cd))) > -1 && isreal(Cl) && isreal(Cd)
-        if min(sum(Cd)) > 0 && isreal(Cl) && isreal(Cd)
+        if Cd(1) > 0 && Cd(2) > 0 && isreal(Cl) && isreal(Cd)
     
     %% 2D to 3D Correction
         totLength = problem.xmax;
@@ -100,6 +108,10 @@ tic;
         end
     
     % if stalled 
+    else
+        t = 10000;
+    end
+    
     else
         t = 10000;
     end

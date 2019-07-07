@@ -18,10 +18,10 @@ stall_or_not = [0 0; 0 0];
 
 
 % Main DRS-ON
-%[stall_or_not(1,2),Re] = stall(cpDRS_main, [], 1);
+[stall_or_not(1,2),Re] = stall(cpDRS_main, [], 1);
 
 % Main DRS-ON
-[stall_or_not(2,2),Re] = stall(cpDRS_flap, [], 1);
+%[stall_or_not(2,2),Re] = stall(cpDRS_flap, [], 1);
 
 %keyboard
 %Global check

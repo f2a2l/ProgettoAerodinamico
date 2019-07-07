@@ -16,10 +16,10 @@ function [stall_or_not,Re] = stall(delta_cp, speed, chord)
 % - chord              chord of the airfoil
 
 % Selected Mach number
-M = 0.15;
+M = 0.25;
 
 if isempty(speed) 
-    Re = 5e6;
+    Re = 2e6;
 else
 
 % Compute Reynols number

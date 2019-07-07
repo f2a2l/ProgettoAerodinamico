@@ -8,7 +8,7 @@ addPaths;
 
 
 %% Optimization
-optiPAR_v2; %as output: lb and ub. Here it is possibile to define boundaries for optimization
+optiPAR_v5; %as output: lb and ub. Here it is possibile to define boundaries for optimization
 
 fun = @lapTime_objFun_DEFINITIVA;
 nvars = 21;
@@ -28,4 +28,4 @@ options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter',...
 [optimalSolution,fval,exitflag,output] = particleswarm(fun,nvars,lb,ub,options);
 
 %% Generate .dat file for CFD Meshing
-%geometryCFD;
+geometryCFD;

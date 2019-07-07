@@ -56,7 +56,7 @@ fprintf('\n')
 
 %% Sub sectors
 
-if u_max*3.6 < 370
+if u_max*3.6 < 330 %was 370
     
 %%% Acceleration - DRS OFF %%%
 % Compute time to reach DRS activation point at a distance D from turn 2

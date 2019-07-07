@@ -1,10 +1,60 @@
-function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
+function [x_transition, Cf] = solverBL(Re, x, y, ue)
 %solverBL - inspired by J. Moran's INTGRL; solves integral boundary layer equations
 %starting at a stagnation point.
 %Uses Thwaites' method for laminar flow, Michel's method to fix transition, Head's method
 %for turbulent flow.
 
-    h_trans = 1.35;
+
+
+    xi = getSwiseCoord(x, y); % get streamwise coordinate
+    ue_fun = @(xixi) interpFun(xi, ue, xixi);
+
+
+
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% USER SETTINGS
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+    %% numerical stabilisation
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    magicNo = 0.1; % the higher, the more accurate but less stable
+    % base: 0.1
+    % for sol. 38: 0.06
+    % try 0.94 to get reattachment but not really stable, try 0.1 for best stability
+    stab_thresh = 2.5; % value of h after which (h > h_threshold) stabilisation is activated
+    dext_fun = @(xxx) 1.72*sqrt(xxx/(Re*ue_fun(xxx))); % Blasius laminar BL
+    artReatt = true; % flag for artificial reattachment
+
+
+    %% numerical integration scheme
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % USING biask <= 1/2 WILL RESULT IN AN UNSTABLE ALGORITHM
+    biask = 1; % bias for theta method (0 <= biask <= 1) for energy shape factor eqn.
+
+
+
+    %% warning behaviour
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    showWarnings = false; % casts warnings from fsolve
+    debugPlot = false; % plots main quantities for debugging
+
+
+
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% PROGRAM START
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
     %% input check
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -23,35 +73,17 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
 
 
 
-    %% load settings
+    %% pre-allocation and parameters definition
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    % possibly fixed transition
-    if isempty(varargin) || varargin{1} == 0
-        fixedTrans = false;
-    else
-        fixedTrans = true;
-        xtrans = varargin{1};
-    end
-
-    % warning behaviour
-    showWarn = true;
-    if length(varargin) > 1
-        showWarn = varargin{2};
-    end
-
-
-    %% define parameters
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    nx = length(x);
-
-
-    %% initialisation
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    nx = length(x); % mesh size
     Cf = zeros(1, nx);
-    warnOut = {};
-    xi = getSwiseCoord(x, y); % get streamwise coordinate
-    ugrad = gradVel(ue, xi); % get velocity gradient
+    h_save = Cf;
+    theta_save = Cf;
+    bret = Cf;
+    bretmax = Cf;
+    luegrad = gradVel(ue, xi); % get velocity gradient
+    luegrad_fun = @(xxx) interpFun(xi, luegrad, xxx);
+    CH = channHeight(xi, ue, dext_fun, magicNo); % get fictitious channel height for stabilization
 
 
 
@@ -59,122 +91,104 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % initial conditions (main variables)
-    %theta = sqrt(.075/Re/ugrad(1)); % value from Moran
-    theta = 0.29004 * sqrt(xi(2)/Re /ue(2));
-    delta = 2.23641 * theta; % derived starting from Eppler's cond. on hek
-    eta = 0;
+    theta = 0.29234 * sqrt(xi(2)/Re /ue(2));
+    h = 0.64791/0.29234;
 
     % initial conditions (auxiliary variables)
-    h = 2.23641; % obtained from value above with Eppler's empirical h(hek)
     Retheta = Re * ue(2) * theta;
-
-    % trial for initial conditions on eta
-    Ret0 = RethetaCrit(h);
-    deta0 = detadre(h);
-    eta = 9 - deta0 * (Ret0 - Retheta);
-    
-    % start stability check
-    Rex = Re * xi(2) * ue(2);
-    Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
+    Retmax = Retheta + 1;
 
     % initialisation
     ii = 2; % counter for panels
     x_transition = x(end);
-    opts = optimoptions('fsolve', 'Display', 'off', 'Algorithm', 'Levenberg-Marquardt', 'FunctionTolerance', 1e-9); % options for nonlinear solver
-    opts.StepTolerance = 0;
-    opts.OptimalityTolerance = 0;
+    fopts = optimset('Display','off'); % fsolve options
 
-    while eta < 9 && Retheta < Retmax
+    % cycle over stations
+    %while Retheta < Retmax % transition criterion
+%
+    %    % calculate skin friction factor and save previous data
+    %    Cf(ii) = cflam(Retheta, h);
+    %    h_save(ii) = h;
+    %    theta_save(ii) = theta;
+    %    bret(ii) = Retheta;
+    %    bretmax(ii) = Retmax;
+%
+    %    % artificial reattachment
+    %    if artReatt && Cf(ii-1) <0 && Cf(ii) * Cf(ii-1) < 0
+    %        break
+    %    end
+%
+    %    % go on to next panel, check if such panel exists
+    %    ii = ii + 1;
+    %    if ii > nx
+    %        break
+    %    end
+%
+    %    if h < stab_thresh % integration without stabilisation (for better accuracy)
+%
+    %        guess_y = [theta; h];
+    %        f = @(n_y) stepLamInt(xi(ii), xi(ii-1), n_y, guess_y, ue(ii), ue(ii-1), Re, luegrad_fun, biask);
+    %        [yy, ~, xflag] = fsolve(f, guess_y, fopts);
+    %        if showWarnings && xflag ~= 1
+    %            warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
+    %        end
+%
+    %    else % integration with stabilisation
+%
+    %        guess_y = [theta; h; ue(ii-1)];
+    %        f = @(nyy) stepLamInt_wStab(ii, xi, nyy, guess_y, ue, h_save, theta_save, CH, Re);
+    %        [yy, ~, xflag] = fsolve(f, guess_y, fopts);
+    %        if showWarnings && xflag ~= 1
+    %            warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
+    %        end
+%
+    %    end
+%
+    %    % update variables
+    %    if h > stab_thresh
+    %        ue(ii) = yy(3);
+    %    end
+    %    theta = yy(1);
+    %    h = yy(2);
+    %    Retheta = Re * theta * ue(ii);
+%
+    %    % transition criterion
+    %    Rex = Re * xi(ii) * ue(ii);
+    %    Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
+%
+    %end
+%
+    %% save transition coordinate
+    %if ii <= nx
+    %    x_transition = x(ii);
+    %end
 
-        % check laminar separation
-        % if it happens, calculations switch to turbulent (as if there were a trans. bubble)
-        % however, if turbulent flow separates straight away, it probably was a laminar separation
-        %if hek < 1.515
-        %    if showWarn
-        %        warning(['laminar separation at x = ' num2str(x(ii))]);
-        %    end
-        %    warnOut{end+1} = 'laminar separation';
-        %    warnOut{end+1} = x(ii);
-        %    break
-        %end
+    % plots for debug
+    %if debugPlot
 
-        % calculate skin friction factor
-        Cf(ii) = cflam(Retheta, h);
+    %    figure
+    %    plot(xi, h_save);
+    %    legend({'h'}) 
 
-        % go on to next panel, check if such panel exists
-        ii = ii + 1;
-        if ii > nx
-            return
-        end
+    %    figure
+    %    plot(xi, theta_save);
+    %    legend({'theta'})
 
-        % integration of bl: forward/backward Euler
-        guess_y = [theta, delta];
-        dxi = xi(ii) - xi(ii-1);
-        f = @(a) stepLamInt(a, Re, theta, delta, dxi, ue(ii-1), ue(ii), ugrad(ii-1), ugrad(ii));
-        [y, ~, exitFlag] = fsolve(f, guess_y, opts);
-        eta = stepAmplInt(eta, dxi, theta, h, y(1), y(2));
-        if ~(exitFlag == 3 || exitFlag == 1)
-            warning(['at iteration ' int2str(ii) ', fsolve did not converge; exit flag ' int2str(exitFlag) '.'])
-        end
-
-        % update variables
-        theta = y(1);
-        delta = y(2);
-        h = delta/theta;
-        Retheta = Re * theta * ue(ii);
-
-        % check transition
-        if fixedTrans
-            if x(ii) > xtrans
-                break
-            end
-        else
-            Rex = Re * xi(ii) * ue(ii);
-            Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
-        end
-
-    end
-
-    % save data
-    x_transition = x(ii);
-    %i_trans = ii;
+    %    figure
+    %    plot(xi, bret)
+    %    hold on
+    %    plot(xi, bretmax)
+    %    hold off
+    %    legend({'Re theta' 'max Re theta'})
+    %
+    %end
 
 
 
-    %% turbulent: integration
+    %% turbulent: data from laminar plate
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    % initialisation
-    h = h_trans;
-    yy(2) = h1_of_h(h);
-    yy(1) = theta;
-
-    % legend: yy = [theta, h1]
-
-    % keep on integrating
     while ii <= nx
-
-        %% get dx and perform integration step
-        %dx = xi(ii) - xi(ii-1);
-        %yy = runge2(ii-1, ii, dx, yy, 2, ue, ugrad, Re);
-%
-        %% unpack integration output
-        %theta(ii) = yy(1);
-        %h = h_of_h1(yy(2));
-%
-        %% get Re and Cf
-        %Retheta = Re * ue(ii) * theta(ii);
-        %Cf(ii) = cfturb(Retheta, h);
-%
-        %% check separation
-        %if h > 2.4
-        %    if showWarn
-        %        warning(['turbulent separation at x = ' num2str(x(ii))]);
-        %    end
-        %    warnOut{end+1} = 'turbulent separation';
-        %    warnOut{end+1} = x(ii);
-        %    return
-        %end
 
         Rex = Re * xi(ii) * ue(ii);
         Cf(ii) = 0.059 * Rex^(-0.2);
@@ -184,7 +198,13 @@ function [warnOut, x_transition, Cf] = solverBL(Re, x, y, ue, varargin)
 
     end
 
+
+
+    %% postprocessing and returning
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     Cf = Cf .* ue.^2;
+
+
 
 end
 
@@ -215,243 +235,239 @@ function xi = getSwiseCoord(x, y)
     end
 end
 
+
+
+%% calculate velocity gradient
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function ugrad = gradVel(ue, xi)
 
     ugrad = zeros(size(ue));
 
     % first and last step: forward/backward differences (I order)
-    ugrad(1) = (ue(2) - ue(1))/(xi(2)-xi(1));
-    ugrad(end) = (ue(end) - ue(end-1))/(xi(end) - xi(end-1));
+    ugrad(1) = log(ue(2)/ue(1)) / log(xi(2)/xi(1));
+    ugrad(end) = log(ue(end)/ue(end-1)) / log(xi(end)/xi(end-1));
 
     % all other steps: centered differences (II order)
     for ii = 2:(length(ue)-1)
-        ugrad(ii) = (ue(ii+1) - ue(ii-1))/(xi(ii+1) - xi(ii-1));
+        ugrad(ii) = log(ue(ii+1)/ue(ii-1)) / log(xi(ii+1)/xi(ii-1));
     end
 
 end
 
 
 
-%% laminar closure: Drela and Giles
+%% calculate fictitious channel height
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function ch = channHeight(xi, ue, dext_fun, dotv)
+    ch = zeros(size(ue));
+    for ii = 1:length(ch)
+        d = dext_fun(xi(ii));
+        ch(ii) = dotv/ue(ii) + d;
+    end
+end
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% LAMINAR CLOSURE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+%% energy shape parameter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function hs = hek_of_h(h)
-    if h < 4
-        hs = 1.515 + 0.076*((4-h)^2)/h;
+    if h < 4.35
+        hs = 0.0111*((h-4.35)^2)/(h+1) - 0.0278*((h-4.35)^3)/(h+1) ...
+                + 1.528 - 0.0002*((h-4.35)*h)^2;
     else
-        hs = 1.515 + 0.040*((h-4)^2)/h;
+        hs = 0.015*((h-4.35)^2)/h + 1.528;
     end
 end
 
-function h = h_of_hek(hek, guess_h) % possibly deprecated
-    if hek < 1.515
-        error('too low value of hek; laminar flow should be separated (possibly originating a transition bubble).')
-    elseif hek < 1.51509 % give it a little error margin
-        h = 4;
-    else
-        f = @(x) hek_of_h(x) - hek;
-        [h, ~, exitFlag] = fzero(f, guess_h);
-        if exitFlag ~= 1
-            error(['fzero did not converge; exit flag ' int2str(exitFlag) '.'])
-        end
-    end
-end
 
-function h = h_of_hek_eppler(hek) % possibly deprecated
-%h_of_hek - empirical formula from Eppler.
-% This one provides a good fit of the previous one (hek_of_h) for 1.8574 < h < 4 (1.515 < hek < 1.7515).
-% However, the inverse of hek(h) is NOT A FUNCTION - so this is basically just one branch of the inverse.
-% Might be useful for initial value.
-    if hek < 1.515
-        error('too low value of hek.')
-    elseif hek < 1.57258
-        h = 4.02922 - (583.60182 - 724.55916*hek + 227.1822*hek.^2) * sqrt(hek - 1.515);
-    else
-        h = 79.870845 - 89.582142*hek + 25.715786*hek.^2;
-    end
-end
 
+%% local skin friction coefficient
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function cf = cflam(Ret, h)
-    if h < 7.4
-        lhs = -0.067 + 0.01977*((7.4-h)^2)/(h-1);
+    if h < 5.5
+        lhs = 0.0727*((5.5-h)^3)/(h+1) - 0.07;
     else
-        lhs = -0.067 + 0.022*(1 - 1.4/(h-6))^2;
+        lhs = 0.015*(1 - 1/(h-4.5))^2 - 0.07;
     end
-    cf = 2 * lhs /Ret;
+    cf = lhs/Ret;
 end
 
+
+
+%% local dissipation coefficient
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function cds = cdiss(Ret, hek, h)
     if h < 4
-        lhs = 0.207 + 0.00205 * (4-h)^(5.5);
+        D1 = 0.207 + 0.00205 * (4-h)^(5.5);
     else
-        lhs = 0.207 - 0.003 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
+        D1 = 0.207 - 0.0016 * ((h-4)^2) / (1 + 0.02*(h-4)^2);
     end
-    cds = lhs * hek /2 /Ret;
-end
-
-function hd = hdens(h)
-    % hd = 0.064/(h-0.8) + 0.251;
-    hd = 0; % since Me = 0
-end
-
-function [l, m] = lm(h)
-    l = (6.54*h - 14.07)/h^2;
-    m = (0.058*((h-4)^2)/(h-1) - 0.068)/l;
-end
-
-function diff = detadre(h)
-    diff = 0.01*sqrt(((2.4*h - 3.7 + 2.5*tanh(1.5*h-4.65))^2)+0.25);
-end
-
-function ret0 = RethetaCrit(h)
-    lhs = (1.415/(h-1)-0.489)*tanh(20/(h-1)-12.9) + 3.295/(h-1) + 0.44;
-    ret0 = 10^lhs;
-end
-
-function y = stepLamInt(x, Re, theta, delta, dxi, ue, n_ue, ugrad, n_ugrad)
-
-    y = zeros(size(x)); % preallocation
-
-    % LEGEND: plain variables = old variables; n_variables = new variables
-
-    % unpack input
-    n_theta = x(1); % theta_(n+1)
-    n_delta = x(2); % delta_(n+1)
-
-    % preprocessing: new auxiliary variables
-    n_Ret = Re * n_ue * n_theta; % Re_theta
-    n_h = n_delta/n_theta; % new h = d/theta
-    n_hek = hek_of_h(n_h); % new hek(h)
-
-    % preprocessing: old auxiliary variables
-    h = delta/theta; % old h
-    hek = hek_of_h(h); % old hek
-    Ret = Re * ue * theta;
-    
-
-    % momentum thickness and energy shape parameter equations: BACKWARDS EULER
-    y(1) = (n_theta - theta)/dxi ...
-            + (2+n_h)*(n_theta/n_ue)*n_ugrad/2 - cflam(n_Ret, n_h)/4 ...
-            + (2+  h)*  (theta/  ue)*  ugrad/2 - cflam(  Ret,   h)/4;
-    y(2) = n_theta*(n_hek-hek)/dxi ...
-            + (2*hdens(n_h) + n_hek*(1-n_h))*(n_theta/n_ue)*n_ugrad - 2*cdiss(n_Ret, n_hek, n_h) ...
-            + n_hek*cflam(n_Ret, n_h)/2;
-    
-    
-end
-
-function n_eta = stepAmplInt(eta, dxi, theta, h, n_theta, n_delta)
-
-    n_h = n_delta/n_theta;
-
-    n_d_eta = detadre(n_h);
-    [n_l, n_m] = lm(n_h);
-
-    d_eta = detadre(h);
-    [l, m] = lm(h);
-
-    n_eta = eta + dxi*( ...
-                n_d_eta * (n_m+1)/4 * n_l/n_theta ...
-                + d_eta * (  m+1)/4 *   l/  theta ...
-            );
-
+    D1 = D1/Ret;
+    cds = (hek*D1/2);
 end
 
 
 
 
-%% turbulent closure: Head's correlation formula
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% UNSTABILIZED INTEGRATION STEP
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function h1 = h1_of_h(h)
-
-    if h > 1.6
-        h1 = 3.3 + 1.5501*(h - .6778)^(-3.064);
-    else
-        h1 = 3.3 + .8234*(h - 1.1)^(-1.287);
-    end
-
-end
 
 
+%% right hand side
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function dy = lamRHS(xi, y, Re, ue, luegrad_fun)
 
-%% turbulent closure: inverse Head's correlation formula
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    dy = zeros(size(y)); % preallocation
 
-function h = h_of_h1(h1)
+    % unpack input
+    theta = y(1); % theta_(n+1)
+    h = y(2); % h_(n+1)
 
-    if h1 < 3.3
-        h = 3.0;
-    elseif h1 < 5.3
-        h = .6778 + 1.1536*(h1 - 3.3)^(-.326);
-    else
-        h = 1.1 + .86*(h1 - 3.3)^(-.777);
-    end
+    % auxiliary variables
+    Ret = Re * ue * theta; % Re_theta
+    hek = hek_of_h(h); % hek(h)
 
-end
+    luegrad = luegrad_fun(xi);
 
+    % momentum thickness derivative from momentum thickness equation
+    dy(1) = (xi/theta)*(cflam(Ret,h)/2) - (2+h)*luegrad;
 
-
-%% turbulent closure: Ludwieg-Tillman skin friction formula
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-
-function cf = cfturb(rtheta, h)
-
-    cf = .246 * (10 ^(-.678*h)) * rtheta^(-.268);
+    % displacement thickness derivative from energy shape parameter equation
+    dy(2) = (xi/theta)*(2*cdiss(Ret,hek,h)/hek - cflam(Ret,h)/2) - (1-h)*luegrad;
 
 end
 
 
 
-%% turbulent integration: derivatives
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%% integration step
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function f = stepLamInt(xi, xi_o, y, y_o, ue, ue_o, Re, luegrad_fun, biask)
 
-function ypr = derivs(ii, yt, yp, ue, ugrad, Re)
+    f = zeros(size(y)); % preallocation
 
-    h1 = yt(2);
+    % unpack input
+    dlxi = log(xi/xi_o);
+    theta = y(1); % theta_(n+1)
+    h = y(2); % h_(n+1)
+    theta_o = y_o(1);
+    h_o = y_o(2);
 
-    if h1 <= 3
-        ypr = yp;
-        warning('h1 < 3; function is returning default value')
-        return
-    end
+    % auxiliary variables
+    hek = hek_of_h(h);
+    hek_o = hek_of_h(h_o);
 
-    h = h_of_h1(h1);
-    rtheta = Re * ue(ii) * yt(1);
+    % calculate forward derivative
+    dl_theta = log(theta/theta_o) / dlxi;
+    dl_hek = log(hek/hek_o) / dlxi;
 
-    ypr(1) = -(h+2)*yt(1)*ugrad(ii)/ue(ii) + .5*cfturb(rtheta,h);
-    ypr(2) = -h1*(ugrad(ii)/ue(ii) + yp(1)/yt(1)) + .0306*(h1-3)^(-.6169)/yt(1);
+    % get rhs
+    rhs = lamRHS(xi, y, Re, ue, luegrad_fun);
+    rhs_o = lamRHS(xi_o, y_o, Re, ue_o, luegrad_fun);
+
+    f(1) = dl_theta - biask*rhs(1) - (1-biask)*rhs_o(1)/2;
+    f(2) = dl_hek ...
+           - biask*rhs(2) - (1-biask)*rhs_o(2);
 
 end
 
 
 
-%% turbulent integration: Runge-Kutta 2
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-function yy_out = runge2(i0, i1, dx, yy, n, ue, ugrad, Re)
 
-    intvls = i1 - i0;
-    yp = [0,0];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% STABILIZED INTEGRATION STEP
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%% right hand side
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function dy = lamRHS_wStab(xi, y, Re, CH, xi_o, ue_o, h_o, CH_o, theta_o)
+
+    dy = zeros(size(y)); % preallocation
+
+    % unpack input
+    theta = y(1); % theta_(n+1)
+    h = y(2); % h_(n+1)
+    ue = y(3);
+
+    % auxiliary variables
+    Ret = Re * ue * theta; % Re_theta
+    delta = h * theta;
+    hek = hek_of_h(h); % hek(h)
+    luegrad = log(ue/ue_o) / log(xi/xi_o); % d(ln(ue))/d(ln(xi))
+    lCHgrad = log(CH/CH_o) / log(xi/xi_o); % d(ln(CH))/d(ln(xi))
+
+    % old auxiliary variables
+    delta_o = h_o * theta_o;
+    ldgrad = log(delta/delta_o) / log(xi/xi_o); % d(ln(delta))/d(ln(xi))
     
-    if intvls < 1
-        yy_out = yy;
-        return
-    end
 
-    for ii = 1:intvls
-        for jj = 1:n
-            yt(jj) = yy(jj);
-        end
-        yp = derivs(i0+ii-1, yt, yp, ue, ugrad, Re);
-        for jj = 1:n 
-            yt(jj) = yy(jj) + dx * yp(jj);
-            ys(jj) = yy(jj) + .5*dx*yp(jj);
-        end
-        yp = derivs(i0+1, yt, yp, ue, ugrad, Re);
-        for jj = 1:n
-            yy_out(jj) = ys(jj) + .5*dx*yp(jj);
-        end
-    end
+    % momentum thickness derivative from momentum thickness equation
+    dy(1) = (xi/theta)*(cflam(Ret,h)/2) - (2+h)*luegrad;
+
+    % displacement thickness derivative from energy shape parameter equation
+    dy(2) = (xi/theta)*(2*cdiss(Ret,hek,h)/hek - cflam(Ret,h)/2) - (1-h)*luegrad;
+
+    % fictitious ue equation
+    dy(3) = (delta*ldgrad - CH*lCHgrad) / (CH-delta);
+
+end
+
+
+
+%% integration step
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function f = stepLamInt_wStab(ii, xi_vec, y, y_o, ue_vec, h_vec, theta_vec, CH_vec, Re)
+
+    biask = 1/2;
+
+    f = zeros(size(y)); % preallocation
+
+    % unpack input
+    dlxi = log(xi_vec(ii)/xi_vec(ii-1));
+
+    theta = y(1); % theta_(n+1)
+    h = y(2); % h_(n+1)
+    ue = y(3);
+    
+    theta_o = y_o(1);
+    h_o = y_o(2);
+    ue_o = y_o(3);
+
+    % auxiliary variables
+    hek = hek_of_h(h);
+    hek_o = hek_of_h(h_o);
+
+    % calculate forward derivative
+    dl_theta = log(theta/theta_o) / dlxi;
+    dl_hek = log(hek/hek_o) / dlxi;
+    dl_ue = log(ue/ue_o) / dlxi;
+
+    % get rhs
+    rhs = lamRHS_wStab(xi_vec(ii), y, Re, CH_vec(ii), xi_vec(ii-1), ue_vec(ii-1), h_vec(ii-1), CH_vec(ii-1), theta_vec(ii-1));
+    rhs_o = lamRHS_wStab(xi_vec(ii-1), y_o, Re, CH_vec(ii-1), xi_vec(ii-2), ue_vec(ii-2), h_vec(ii-2), CH_vec(ii-2), theta_vec(ii-2));
+
+    f(1) = dl_theta - rhs(1)/2 - rhs_o(1)/2;
+    f(2) = dl_hek ...
+           - biask*rhs(2) - (1-biask)*rhs_o(2);
+    f(3) = dl_ue - rhs(3)/2 - rhs_o(3)/2;
 
 end
