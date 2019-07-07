@@ -26,11 +26,11 @@ stall_or_not = [0 0; 0 0];
 %keyboard
 %Global check
 if stall_or_not == 0
-    
+    % 0 = NO STALLO
     stall_flag = 0;
     
 else
-    
+    % 1 = STALLO
     stall_flag = 1;
     
 end
