@@ -81,10 +81,10 @@ function [t] = lapTime_objFun(param)
             % From technical Rules 2019
             b = 1.010; %wing span
             h = 0.67; %endplate height
-            maxLength = 350;
+            maxLength = 0.350;
 
             %Scale factor
-            scaleFactor = 350 / totLength;
+            scaleFactor = maxLength / totLength;
             chord_main = scaleFactor;
 
             % Wing aspect ratio
