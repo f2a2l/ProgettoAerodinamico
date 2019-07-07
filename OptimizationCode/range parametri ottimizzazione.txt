@@ -1,0 +1,37 @@
+0.0Range variabilità parametri ottimizzazione
+21 parametri:
+            -8 IGP davanti:
+			               -c1       -->[0.01, 0.96]
+						   -c2       -->[0.02, 0.97]
+						   -c3       -->[-0.074, 0.247]
+						   -c4       -->[-0.102, 0.206]
+						   -x_t      -->[0.2002, 0.4813]
+						   -T        -->[0.0246, 0.3227]
+						   -rho      -->[0.175, 1.4944]
+						   -beta_TE  -->[0.1452, 4.8724]
+						   
+			-8 IGP dietro:
+			              -c1       -->[0.01, 0.96]
+						  -c2       -->[0.02, 0.97]
+						  -c3       -->[-0.074, 0.247]
+						  -c4       -->[-0.102, 0.206]
+						  -x_t      -->[0.2002, 0.4813]
+						  -T        -->[0.0246, 0.3227] oppure [8%c, 18%c]
+						  -rho      -->[0.175, 1.4944]
+						  -beta_TE  -->[0.1452, 4.8724]
+						  
+			-Alpha davanti -->[5°, 25°]
+			
+			-Alpha dietro  -->[40°, 70°]
+			
+			-x(TE_davanti-LE_dietro) -->[-2%c, 1.6%c]
+			
+			-y(TE_davanti-LE_dietro) -->[1%c, 1.6%c]
+			
+			-corda dietro -->[25%c, 40%c]
+			
+			
+Con DRS attivo l'incidenza del profilo davanti non cambia; cambia l'incidenza del profilo dietro, che diventa parallelo al profilo davanti: la distanza x rimane uguale, la distanza y è di 95 mm.
+			
+		
+			       

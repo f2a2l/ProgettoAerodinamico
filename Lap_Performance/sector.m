@@ -36,6 +36,14 @@ CL = CL_car + CL;
 CD = CD_car + CD; 
 
 
+if length(CL) ~= 2 
+    CL = [CL, CL];
+end
+if length(CD) ~= 2
+    CD = [CD, CD];
+end
+
+
 % Compute maximum speed
 u_max = max_speed(CD(2),fig);   % [m/s]    maximum car speed
 
@@ -48,6 +56,8 @@ fprintf('\n')
 
 %% Sub sectors
 
+if u_max*3.6 < 330 %was 370
+    
 %%% Acceleration - DRS OFF %%%
 % Compute time to reach DRS activation point at a distance D from turn 2
 % and compute speed when DRS is activated
@@ -74,6 +84,8 @@ t_SB3 = s_SB3 / u_max;
 %    SB1    SB2      SB3     SB4
 T_sector = t_SB1 + t_SB2 + t_SB3 + t_SB4;
 
+
+
 %% Display results
 fprintf('\n')
 disp('****** SUB SECTOR 1 ******')
@@ -97,4 +109,11 @@ disp('--------------------------')
 disp(['| Sector time: ',num2str(T_sector),' s |']) 
 disp('--------------------------')
 
+%Invalidate irrealistic results
+else
+    
+disp('------IRREALISTIC RESULT------')
+disp('INVALIDATED!!!!')
+    T_sector = 1000;
+end
 end

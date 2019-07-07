@@ -54,6 +54,10 @@ function [x, y, totLength, yTotLength] = multiGeometry(npoint, aname, alpha, dis
 
     end
     
+    % rotate flap airfoil along T.E. (hinge point)
+    DRS_angle = alpha(2) - alpha(1);
+    [x, y] = DRS_OPEN(x,y,DRS_angle);
+
     % plot airfoils
     if pltFlag
         figure('Name','Multi element profile geometry','NumberTitle','off')
