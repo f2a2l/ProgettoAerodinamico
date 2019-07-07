@@ -7,7 +7,6 @@ XFfolder = strcat(currDir,'/XFOIL');
 OPTIfolder = strcat(currDir,'/OptimizationCode');
 LAPfolder = strcat(currDir,'/Lap_Performance');
 GEOMfolder = strcat(currDir,'/Geometry');
-DYNfolder = strcat(currDir,'/DynMod');
 CORRfolder = strcat(currDir,'/2dto3dcorrection');
 CFDfolder = strcat(currDir,'/CFD');
-addpath(HSfolder,XFfolder,LAPfolder,GEOMfolder,DYNfolder,CORRfolder,OPTIfolder,CFDfolder);
+addpath(HSfolder,XFfolder,LAPfolder,GEOMfolder,CORRfolder,OPTIfolder,CFDfolder);
