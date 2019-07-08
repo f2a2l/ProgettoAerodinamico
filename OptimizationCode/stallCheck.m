@@ -11,17 +11,17 @@
 stall_or_not = [0 0; 0 0];    
     
 % Main DRS-OFF
-[stall_or_not(1,1),Re] = stall(cp_main, [], 1);
+[stall_or_not(1,1),Re] = stall_025(cp_main, [], 1);
 
 % Flap DRS-OFF
-[stall_or_not(2,1),Re] = stall(cp_flap, [], 1);
+[stall_or_not(2,1),Re] = stall_025(cp_flap, [], 1);
 
 
 % Main DRS-ON
-[stall_or_not(1,2),Re] = stall(cpDRS_main, [], 1);
+[stall_or_not(1,2),Re] = stall_025(cpDRS_main, [], 1);
 
 % Main DRS-ON
-[stall_or_not(2,2),Re] = stall(cpDRS_flap, [], 1);
+[stall_or_not(2,2),Re] = stall_025(cpDRS_flap, [], 1);
 
 
 %Global check
