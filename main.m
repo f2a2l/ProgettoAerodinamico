@@ -27,7 +27,7 @@ options = optimoptions('particleswarm','SwarmSize',50,'Display','Iter',...
                                       
 [optimalSolution,fval,exitflag,output] = particleswarm(fun,nvars,lb,ub,options);
 
-%% Generate .dat file for CFD Meshing
-geometryCFD;
-save workspace_CFD;
+%% Save data and generate .dat files for CFD Meshing
 saveProfiles;
+geometryCFD;
+save workspace;
