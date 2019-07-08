@@ -72,6 +72,9 @@ function [t] = lapTime_objFun(param)
 
           Cl = [Cl_noDRS, Cl_DRS];
           Cd = [Cd_noDRS, Cd_DRS];
+          
+	  % Prandtl-Glauert Correction
+	  Cl = Cl / sqrt(1 - Ma^2);          
 
           %% Check Quality of results
           if Cd(1) > 0 && Cd(2) > 0 && isreal(Cl) && isreal(Cd)

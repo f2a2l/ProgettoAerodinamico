@@ -1,5 +1,6 @@
 % Check if main and flap airfoils do not stall in both DRS-OFF and DRS-ON configuration
 
+    Ma = 0.25;
 
     cp_main = cp{1};
     cp_flap = cp{2};
@@ -8,7 +9,6 @@
     cpDRS_flap = cp_DRS{2};
 
 stall_or_not = [0 0; 0 0];    
-%keyboard
     
 % Main DRS-OFF
 [stall_or_not(1,1),Re] = stall(cp_main, [], 1);
@@ -23,7 +23,7 @@ stall_or_not = [0 0; 0 0];
 % Main DRS-ON
 [stall_or_not(2,2),Re] = stall(cpDRS_flap, [], 1);
 
-%keyboard
+
 %Global check
 if stall_or_not == 0
     % 0 = NO STALLO
