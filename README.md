@@ -4,6 +4,47 @@ Credits:
 
 - HessSmith solver originally developed by Federico Messanelli (federico.messanelli@polimi.it).
 
+This project comprises a straight time calculator for a F1 car (folder `Lap_Performance`), a geometry module to generate wing profiles with the IGP parametrization (`Geometry`), a 2D aerodynamic solver (`ViscousHessSmith`) with suitable 3D corrections (`2dto3dcorrection`) and a set of routines to calculate the optimal wing section geometry for the rear wing of a F1 car on the given straight and to postprocess data (`OptimizationCode`, `CFD`).
+
+
+
+---
+
+__Table of contents__
+
+[TOC]
+
+---
+
+
+
+## Quick start
+
+- To launch the optimization process: run `main`.
+- To see the final results: run `loadFinal`; this will load the objects `profile` (referring to the closed flap geometry - aka DRS OFF) and `profile_DRS` (open flap or DRS ON configuration). Access them using dot indexing - for instance,  `profile.plotCp` will plot the pressure coefficient. For more information, check solverVHS documentation. 
+
+
+
+## Straight perfomance
+
+The straight selected for the project is the straight between turn 2 and turn 3 of Baku City Circuit.
+
+The evaluation of time needed to run this straight is performed by ```[T_sector] = sector(CL, CD, fig)```
+
+- _CL_ is a vector containing the rear wing CL when DRS is closed and when DRS is open.
+- _CD_ is a vector containing the rear wing CD when DRS is closed and when DRS is open.
+- _fig_ creates figures of straight performances if ```true```.
+
+Example: 
+
+```matlab
+CD = [1.169, 0.969];
+CL = [4.846, 4.346];
+[T_sector] = sector(CL, CD, true);
+```
+
+
+
 
 
 ## Multi-element geometry
@@ -16,7 +57,7 @@ To deal with multiple geometries, the following conventions have been adopted:
   - x axis passing through the trailing edge of the first profile, pointing towards it;
     - this means that the point (1,0) corresponds to the trailing edge of the first profile;
   - y axis consequently.
- 
+
 ![alt text](https://i.imgur.com/k4vNnKt.png)
 
 Function `multiGeometry` can be found in folder `Geometry`; it can be used as such:
@@ -49,19 +90,19 @@ arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5;
 
 
 
-## Hess smith solver
+## VHS - Viscous Hess Smith
 
-A Hess Smith solver is included in folder `HessSmith`. To start an UI version of this program, just run `StartHS` (after running `addPaths`). Alternatively, you can access the solver as a function with the instructions below.
-
-
-
-### Using the solver
-
-Function `solverHS` takes different inputs depending whether it is used for a single or multiple airfoils:
+A 2D, multi element aerodynamic solver is included in folder `ViscousHessSmith`; you can access the solver as a function with the instructions below.
 
 
 
-__Single airfoil case__: `[...] = solverHS(npoint, arflPar, alpha)`, where:
+### Creating an instance of the solver
+
+Function `solverVHS` takes different inputs depending whether it is used for a single or multiple airfoils:
+
+
+
+__Single airfoil case__: `obj_name = solverVHS(npoint, arflPar, alpha)`, where:
 - _npoint_ is half the number of points used to generate geometry.
 - _arflPar_ is a row vector, each component corresponding to the parameters describing airfoil geometry.
 - _alpha_ is the angle of attack.
@@ -69,70 +110,49 @@ __Single airfoil case__: `[...] = solverHS(npoint, arflPar, alpha)`, where:
 Example:
 ```MATLAB
 arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
-[Cl, Cd] = solverHS(80, arflPar, 3);
+ws = solverVHS(80, arflPar, 3);
 ```
 
 
 
-__Multiple airfoil case__: `[...] = solverHS(npoint, aname, alpha, dist, crel)`; the inputs are exactly the same as the ones used for `multiGeometry` (see above).
+__Multiple airfoil case__: ` obj_name = solverHS(npoint, aname, alpha, dist, crel)`; the inputs are exactly the same as the ones used for `multiGeometry` (see above).
 
 Example:
 
 ```MATLAB
 arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5;
            0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5];
-[Cl, Cd] = solverHS(80, arflPar, [3, 6], [-0.05, -0.05], 0.3);
+ws = solverVHS(80, arflPar, [3, 6], [-0.05, -0.05], 0.3);
 ```
 
 
 
-### Outputs
+### Accessing results
 
-In most cases, it is sufficient to use (just like the examples above): 
+You can access all the parameters and methods of each instance of the object solverVHS with dot indexing. For instance, to get force coefficients:
 
 ```MATLAB	
-[Cl, Cd] = solverHS(...)
+[Cl, Cd, Cl_single, Cd_single] = ws.getBL(Re, plotFlag)
 ```
 
-_Cl_ and _Cd_ are column vectors containing the coefficients of lift and drag of each profile.
+Where:
 
-However, the full list of output is the following:
+- _Cl_ and _Cd_ are scalars, corresponding to the overall force coefficients of the wing section;
+- _Cl_single_ and _Cd_single_ are vectors, each component corresponding to the force coefficient of an airfoil (just one component if the wing section has one element only);
+- _Re_ is the Reynolds number;
+- _plotFlag_ is a boolean number, true if you want to plot the $c_f$ profile.
+
+Please notice that __the reference aerodynamic length is the chord of the first airfoil__.
+
+Many other commands are available:
 
 ```MATLAB
-[Cl, Cd, totLength, Cp, maxdCp, x, y, p, p1, SOL] = solverHS(...)
+ws.plotCp							% plots the Cp distribution
+ws.plotStreamlines		% plots streamlines
+ws.plotUe							% plots velocity profile on the airfoils
 ```
 
-Any of them can be arbitrarily omitted, either by truncating the list of output arguments or by inserting `~` instead of them. Here’s a brief explaination of each output:
-
-- _totLength_, _x_ and _y_ are the same as in `multiGeometry`.
-- _Cp_ contains the chord distribution of pressure coefficient (possibly deprecated).
-- _maxdCp_ is a matrix containing values of maximum $\Delta C_P$; each row corresponds to an airfoil, first column corresponts to lower part, second column to upper part.
-- _p_, _p1_ are classes containing information about the panelisation; _SOL_ is the solution of the linear system associated to each geometry. These outputs are not meant for extarnal usage; however, they are used by the UI programs `StartHS`.
-
-
-
-
-
-## Straight perfomance
-
-The straight selected for the project is the straight between turn 2 and turn 3 of Baku City Circuit.
-
-The evaluation of time needed to run this straight is performed by ```[T_sector] = sector(CL, CD, fig)```
-
-- _CL_ is a vector containing the rear wing CL when DRS is closed and when DRS is open.
-- _CD_ is a vector containing the rear wing CD when DRS is closed and when DRS is open.
-- _fig_ creates figures of straight performances if ```true```.
-
-Example: 
-
-```matlab
-CD = [1.169, 0.969];
-CL = [4.846, 4.346];
-
-[T_sector] = sector(CL, CD, true);
-```
-
-
+Some other properties of solverVHS can be accessed; to see them, just type `ws.` and press tab for automatic completion. However, this properties should not be of interest to the user.
 
 
 
