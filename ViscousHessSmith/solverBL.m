@@ -23,7 +23,7 @@ function [x_transition, Cf] = solverBL(Re, x, y, ue)
 
     %% numerical stabilisation
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    magicNo = 0.1; % the higher, the more accurate but less stable
+    magicNo = 0.06; % the higher, the more accurate but less stable
     % base: 0.1
     % for sol. 38: 0.06
     % try 0.94 to get reattachment but not really stable, try 0.1 for best stability
@@ -104,84 +104,84 @@ function [x_transition, Cf] = solverBL(Re, x, y, ue)
     fopts = optimset('Display','off'); % fsolve options
 
     % cycle over stations
-    %while Retheta < Retmax % transition criterion
-%
-    %    % calculate skin friction factor and save previous data
-    %    Cf(ii) = cflam(Retheta, h);
-    %    h_save(ii) = h;
-    %    theta_save(ii) = theta;
-    %    bret(ii) = Retheta;
-    %    bretmax(ii) = Retmax;
-%
-    %    % artificial reattachment
-    %    if artReatt && Cf(ii-1) <0 && Cf(ii) * Cf(ii-1) < 0
-    %        break
-    %    end
-%
-    %    % go on to next panel, check if such panel exists
-    %    ii = ii + 1;
-    %    if ii > nx
-    %        break
-    %    end
-%
-    %    if h < stab_thresh % integration without stabilisation (for better accuracy)
-%
-    %        guess_y = [theta; h];
-    %        f = @(n_y) stepLamInt(xi(ii), xi(ii-1), n_y, guess_y, ue(ii), ue(ii-1), Re, luegrad_fun, biask);
-    %        [yy, ~, xflag] = fsolve(f, guess_y, fopts);
-    %        if showWarnings && xflag ~= 1
-    %            warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
-    %        end
-%
-    %    else % integration with stabilisation
-%
-    %        guess_y = [theta; h; ue(ii-1)];
-    %        f = @(nyy) stepLamInt_wStab(ii, xi, nyy, guess_y, ue, h_save, theta_save, CH, Re);
-    %        [yy, ~, xflag] = fsolve(f, guess_y, fopts);
-    %        if showWarnings && xflag ~= 1
-    %            warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
-    %        end
-%
-    %    end
-%
-    %    % update variables
-    %    if h > stab_thresh
-    %        ue(ii) = yy(3);
-    %    end
-    %    theta = yy(1);
-    %    h = yy(2);
-    %    Retheta = Re * theta * ue(ii);
-%
-    %    % transition criterion
-    %    Rex = Re * xi(ii) * ue(ii);
-    %    Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
-%
-    %end
-%
-    %% save transition coordinate
-    %if ii <= nx
-    %    x_transition = x(ii);
-    %end
+    while Retheta < Retmax % transition criterion
 
-    % plots for debug
-    %if debugPlot
+        % calculate skin friction factor and save previous data
+        Cf(ii) = cflam(Retheta, h);
+        h_save(ii) = h;
+        theta_save(ii) = theta;
+        bret(ii) = Retheta;
+        bretmax(ii) = Retmax;
 
-    %    figure
-    %    plot(xi, h_save);
-    %    legend({'h'}) 
+        % artificial reattachment
+        if artReatt && Cf(ii-1) <0 && Cf(ii) * Cf(ii-1) < 0
+            break
+        end
 
-    %    figure
-    %    plot(xi, theta_save);
-    %    legend({'theta'})
+        % go on to next panel, check if such panel exists
+        ii = ii + 1;
+        if ii > nx
+            break
+        end
 
-    %    figure
-    %    plot(xi, bret)
-    %    hold on
-    %    plot(xi, bretmax)
-    %    hold off
-    %    legend({'Re theta' 'max Re theta'})
-    %
-    %end
+        if h < stab_thresh % integration without stabilisation (for better accuracy)
+
+            guess_y = [theta; h];
+            f = @(n_y) stepLamInt(xi(ii), xi(ii-1), n_y, guess_y, ue(ii), ue(ii-1), Re, luegrad_fun, biask);
+            [yy, ~, xflag] = fsolve(f, guess_y, fopts);
+            if showWarnings && xflag ~= 1
+                warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
+            end
+
+        else % integration with stabilisation
+
+            guess_y = [theta; h; ue(ii-1)];
+            f = @(nyy) stepLamInt_wStab(ii, xi, nyy, guess_y, ue, h_save, theta_save, CH, Re);
+            [yy, ~, xflag] = fsolve(f, guess_y, fopts);
+            if showWarnings && xflag ~= 1
+                warning(['at iteration ' int2str(ii) ', fsolve did not converge (flag ' int2str(xflag) ').'])
+            end
+
+        end
+
+        % update variables
+        if h > stab_thresh
+            ue(ii) = yy(3);
+        end
+        theta = yy(1);
+        h = yy(2);
+        Retheta = Re * theta * ue(ii);
+
+        % transition criterion
+        Rex = Re * xi(ii) * ue(ii);
+        Retmax = 1.174 * (1 + 22400/Rex) * Rex^(0.46);
+
+    end
+
+    % save transition coordinate
+    if ii <= nx
+        x_transition = x(ii);
+    end
+
+    %plots for debug
+    if debugPlot
+
+        figure
+        plot(xi, h_save);
+        legend({'h'}) 
+
+        figure
+        plot(xi, theta_save);
+        legend({'theta'})
+
+        figure
+        plot(xi, bret)
+        hold on
+        plot(xi, bretmax)
+        hold off
+        legend({'Re theta' 'max Re theta'})
+    
+    end
 
 
 
