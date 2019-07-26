@@ -21,6 +21,13 @@ function [x_transition, Cf] = solverBL(Re, x, y, ue)
 
 
 
+    %% fix transition
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    force_trans = true;
+    xi_ftrans = 0;
+
+
+
     %% numerical stabilisation
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     magicNo = 0.06; % the higher, the more accurate but less stable
@@ -105,6 +112,10 @@ function [x_transition, Cf] = solverBL(Re, x, y, ue)
 
     % cycle over stations
     while Retheta < Retmax % transition criterion
+
+        if force_trans && xi(ii) > xi_ftrans
+            break
+        end
 
         % calculate skin friction factor and save previous data
         Cf(ii) = cflam(Retheta, h);
