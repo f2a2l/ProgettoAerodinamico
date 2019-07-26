@@ -4,7 +4,7 @@ Credits:
 
 - HessSmith solver originally developed by Federico Messanelli (federico.messanelli@polimi.it).
 
-This project comprises a straight time calculator for a F1 car (folder `Lap_Performance`), a geometry module to generate wing profiles with the IGP parametrization (`Geometry`), a 2D aerodynamic solver (`ViscousHessSmith`) with suitable 3D corrections (`2dto3dcorrection`) and a set of routines to calculate the optimal wing section geometry for the rear wing of a F1 car on the given straight and to postprocess data (`OptimizationCode`, `CFD`).
+This project comprises a straight time calculator for a F1 car (folder `Lap_Performance`), a geometry module to generate wing profiles with the IGP parametrization (`Geometry`), a 2D aerodynamic solver (`ViscousHessSmith`) with suitable 3D corrections (`2dto3dcorrection`), an and a set of routines to calculate the optimal wing section geometry for the rear wing of a F1 car on the given straight and to postprocess data (`OptimizationCode`, `CFD`).
 
 
 
@@ -92,7 +92,7 @@ arflPar = [0.3, 0.6, 0, 0, 0.3, 0.12, 0.3, 1.5;
 
 ## VHS - Viscous Hess Smith
 
-A 2D, multi element aerodynamic solver is included in folder `ViscousHessSmith`; you can access the solver as a function with the instructions below.
+A 2D, multi element aerodynamic solver is included in folder `ViscousHessSmith`; the solver is built as a class and you can create an instance of it with the following instructions.
 
 
 
@@ -152,20 +152,25 @@ ws.plotStreamlines		% plots streamlines
 ws.plotUe							% plots velocity profile on the airfoils
 ```
 
-Some other properties of solverVHS can be accessed; to see them, just type `ws.` and press tab for automatic completion. However, this properties should not be of interest to the user.
+Some other properties of solverVHS can be accessed; to see them, just type `ws.` and press tab for automatic completion. However, these properties should not be of interest to the user.
 
 
 
-## Endplates correction: documentation
-[t,s] = corr2dto3d(lambda), where:
+## Endplates correction
+
+This code interploates a digitized graph of t and s correction facors, provided by Benzing, Ali/Wings p.63.
+
+`[t, s] = corr2dto3d(lambda)`, where:
+
 - _lambda_ is the wing aspect ratio.
-This code interploates a digitized graph of t and s correction facors, provided by Benzing, Ali/Wings p.63
+
+  
 
 
 
 
 
-## Xfoil-Matlab Interface: documentation.
+## Xfoil-Matlab Interface
 
 The following is a function that prints out the outputs in Matlab from an XFoil analysis. 
 
