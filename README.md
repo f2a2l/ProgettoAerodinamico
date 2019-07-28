@@ -156,6 +156,15 @@ Some other properties of solverVHS can be accessed; to see them, just type `ws.`
 
 
 
+### Fixing transition
+
+To fix transition, open file `solverBL.m` in folder `ViscousHessSmith`. Then, right at the beginning, after the comments “user settings” and “fix transition”, find variables `force_trans` and `xi_ftrans`.
+
+- to fix transition, set `force_trans` to _true_ and `xi_ftrans` to the value of the streamwise coordinate at which you want to fix transition;
+- to let the solver calculate transition, set `force_trans` to _false_.
+
+
+
 ## Endplates correction
 
 This code interploates a digitized graph of t and s correction facors, provided by Benzing, Ali/Wings p.63.

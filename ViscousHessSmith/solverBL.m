@@ -23,14 +23,14 @@ function [x_transition, Cf] = solverBL(Re, x, y, ue)
 
     %% fix transition
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    force_trans = true;
+    force_trans = false;
     xi_ftrans = 0;
 
 
 
     %% numerical stabilisation
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    magicNo = 0.06; % the higher, the more accurate but less stable
+    magicNo = 0.09; % the higher, the more accurate but less stable
     % base: 0.1
     % for sol. 38: 0.06
     % try 0.94 to get reattachment but not really stable, try 0.1 for best stability
